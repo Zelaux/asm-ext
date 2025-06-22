@@ -57,7 +57,7 @@ subprojects{
         //noinspection GroovyAssignabilityCheck
         sourceSets.main.java.srcDirs = ["src/", "$buildDir/generated/sources/annotationProcessor/java/main", "generated/"]
         //noinspection GroovyAssignabilityCheck
-        sourceSets.test.java.srcDirs = ["test"]
+        sourceSets.test.java.srcDirs = ["test/"]
         //noinspection GroovyAssignabilityCheck
         sourceSets.test.resources.srcDirs = ["test/resources"]
         dependencies{
@@ -83,8 +83,8 @@ subprojects{
             useJUnitPlatform()
         }
 
-        tasks.withType(Javadoc){
-            options{
+        tasks.withType(Javadoc).configureEach {
+            options {
                 addStringOption('Xdoclint:none', '-quiet')
                 encoding('UTF-8')
             }
@@ -196,9 +196,9 @@ void eachChild(Set<Project> set) {
     configure(set){
         dependencies{
             if(subprojects.size() == 0){
-                compileOnly "org.jetbrains:annotations:24.0.1"
-                testImplementation 'junit:junit:4.13.1'
-                testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.8.2")
+                compileOnly "org.jetbrains:annotations:$jetbrainsAnnoVersion"
+//                testImplementation "junit:junit:$junitVersion"
+//                testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.8.2")
             }
         }
         //        sourceSets

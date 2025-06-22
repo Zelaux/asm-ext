@@ -5,8 +5,6 @@ import org.jetbrains.annotations.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.tree.*;
 
-import java.util.function.Supplier;
-
 public class MethodStuff {
     // Сохранение байткода метода в файл
     @SneakyThrows

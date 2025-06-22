@@ -2,13 +2,15 @@ package asmlib.analytics;
 
 import asmlib.util.NodeUtil;
 import lombok.val;
-import org.junit.*;
+import org.junit.jupiter.api.Test;
 import org.objectweb.asm.*;
 
 import java.io.*;
 import java.net.*;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ObjectCreatingIndexerTest {
 
@@ -30,8 +32,8 @@ public class ObjectCreatingIndexerTest {
         val visitor = ObjectCreationRangeAnalyzer.visitor(API);
         methodNode.accept(visitor);
 
-        Assert.assertEquals(2, visitor.rootRanges.size());
-        Assert.assertEquals(1, visitor.rootRanges.get(1).innerObjects.size());
+        assertEquals(2, visitor.rootRanges.size());
+        assertEquals(1, visitor.rootRanges.get(1).innerObjects.size());
 
     }
 
@@ -44,8 +46,8 @@ public class ObjectCreatingIndexerTest {
         methodNode.accept(visitor);
         val expectedResult = visitor.toResult();
         val actualResult = ObjectCreationRangeAnalyzer.analyze(API, methodNode);
-        Assert.assertEquals("rootRanges", string(expectedResult.rootRanges), string(actualResult.rootRanges));
-        Assert.assertEquals("allRanges", string(expectedResult.allRanges), string(actualResult.allRanges));
+        assertEquals( string(expectedResult.rootRanges), string(actualResult.rootRanges),"rootRanges");
+        assertEquals( string(expectedResult.allRanges), string(actualResult.allRanges),"allRanges");
 
     }
 

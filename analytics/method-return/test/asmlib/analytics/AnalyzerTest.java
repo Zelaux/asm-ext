@@ -8,12 +8,13 @@ import com.github.javaparser.ast.body.RecordDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import lombok.SneakyThrows;
 import org.intellij.lang.annotations.MagicConstant;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.MethodNode;
 
 import java.lang.reflect.Method;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class AnalyzerTest {
 
@@ -51,8 +52,8 @@ public class AnalyzerTest {
 
         TypeAndSubtypes result = ResolveRealMethodReturnType
                 .resolveDescriptor(API, null, methodNode);
-        Assert.assertEquals("Ljava/lang/Object;", result.typeDescriptor);
-        Assert.assertEquals(
+        assertEquals("Ljava/lang/Object;", result.typeDescriptor);
+        assertEquals(
                 "Ljava/lang/Byte;Ljava/lang/Double;Ljava/lang/Integer;Ljava/lang/Short;",
                 String.join("", result.subtypesDescriptors)
         );
@@ -61,11 +62,11 @@ public class AnalyzerTest {
     @SneakyThrows
     @Test
     public void clearResolve() {
-        Assert.assertEquals(Number.class,
+        assertEquals(Number.class,
                 ResolveRealMethodReturnType.resolveClass(API, null, SELF_CLASS,
                         methodNode("getTenInType")
                 ));
-        Assert.assertEquals(TypeDeclaration.class,
+        assertEquals(TypeDeclaration.class,
                 ResolveRealMethodReturnType.resolveClass(API, null, null,
                         methodNode("someNode")
                 ));

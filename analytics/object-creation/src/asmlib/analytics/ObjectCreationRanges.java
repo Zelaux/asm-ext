@@ -2,7 +2,6 @@ package asmlib.analytics;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.ToString;
 import lombok.experimental.FieldDefaults;
 
 import java.util.List;

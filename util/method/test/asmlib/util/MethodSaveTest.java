@@ -1,13 +1,13 @@
 package asmlib.util;
 
 import lombok.*;
-import org.junit.*;
-import org.junit.function.*;
+import org.junit.jupiter.api.Test;
 
 import java.io.*;
 import java.lang.reflect.*;
 
 import static asmlib.util.MethodStuff.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class MethodSaveTest{
     @SuppressWarnings("SameParameterValue")
@@ -17,7 +17,7 @@ public class MethodSaveTest{
         System.setOut(new PrintStream(out));
         runnable.run();
         System.setOut(prevOut);
-        Assert.assertEquals(expected, out.toString().replace(System.lineSeparator(),"\n"));
+        assertEquals(expected, out.toString().replace(System.lineSeparator(),"\n"));
     }
 
     @SneakyThrows
@@ -36,7 +36,7 @@ public class MethodSaveTest{
 
         assertOutput(
             "a: 3\na: 3\na: 3\nb: 4\n",
-            () -> Assert.assertEquals(7, (int)method.invoke(null, 3, 4))
+            () -> assertEquals(7, (int)method.invoke(null, 3, 4))
         );
     }
 

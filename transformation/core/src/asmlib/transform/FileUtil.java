@@ -1,5 +1,7 @@
 package asmlib.transform;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.*;
 import java.nio.file.*;
 import java.nio.file.attribute.*;
@@ -13,14 +15,14 @@ public class FileUtil{
         Files.walkFileTree(source, new SimpleFileVisitor<>(){
 
             @Override
-            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException{
+            public @NotNull FileVisitResult preVisitDirectory(Path dir, @NotNull BasicFileAttributes attrs) throws IOException{
                 Path targetDir = destination.resolve(source.relativize(dir)); // Создаем относительный путь
                 Files.createDirectories(targetDir); // Создаем директорию, если ее нет
                 return FileVisitResult.CONTINUE;
             }
 
             @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException{
+            public @NotNull FileVisitResult visitFile(Path file, @NotNull BasicFileAttributes attrs) throws IOException{
                 Files.copy(file, destination.resolve(source.relativize(file)), StandardCopyOption.REPLACE_EXISTING); // Копируем файл
                 return FileVisitResult.CONTINUE;
             }
