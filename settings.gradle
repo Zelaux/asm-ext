@@ -1,5 +1,5 @@
 //file:noinspection GroovyAssignabilityCheck
-rootProject.name = 'JavaAsmLib'
+rootProject.name = 'asm-ext'
 //needs for EntryPoint
 include "dev-annotations"
 
@@ -8,15 +8,6 @@ include("transformation:core")
 include "analytics:method-return"
 include "analytics:object-creation"
 
-include "annotations"
-include "annotations:lombok-plugin-starter"
-include "annotations:method-bytecode"
-include "annotations:value-class"
-include "annotations:test"
-include "annotations:packable-class"
-include "annotations:debug-print"
-include "annotations:initialize-in"
-include "annotations:unshadowed-lombok"
 
 include "util:visitor"
 include "util:method"

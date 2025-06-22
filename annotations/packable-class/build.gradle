@@ -1,5 +1,0 @@
-//file:noinspection DependencyNotationArgument
-dependencies{
-    implementation(aproj("annotations:lombok-plugin-starter"))
-    implementation "com.github.javaparser:javaparser-symbol-solver-core:$jparcerVersion"
-}

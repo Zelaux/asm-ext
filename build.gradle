@@ -5,7 +5,7 @@ def localRoot = project
 allprojects{}
 subprojects{
     apply plugin: 'maven-publish'
-    group = 'com.github.Zelaux.JavaAsmLib'
+    group = 'com.github.asm-ext'
     ext.localRoot = localRoot
     ext.all_exports = [
             'jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED',
@@ -61,24 +61,23 @@ subprojects{
         //noinspection GroovyAssignabilityCheck
         sourceSets.test.resources.srcDirs = ["test/resources"]
         dependencies{
-            testImplementation platform('org.junit:junit-bom:5.9.1')
+            testImplementation platform("org.junit:junit-bom:$junitVersion")
             testImplementation 'org.junit.jupiter:junit-jupiter'
 
 
-            def asmVersion = '9.7.1'
             implementation "org.ow2.asm:asm-util:$asmVersion"
             implementation "org.ow2.asm:asm-tree:$asmVersion"
             implementation "org.ow2.asm:asm-analysis:$asmVersion"
 
             if(project != devAnnotations) compileOnly devAnnotations
-            compileOnly "org.jetbrains:annotations:24.0.1"
-            testCompileOnly "org.jetbrains:annotations:24.0.1"
+            compileOnly "org.jetbrains:annotations:$jetbrainsAnnoVersion"
+            testCompileOnly "org.jetbrains:annotations:$jetbrainsAnnoVersion"
 
 
-            compileOnly 'org.projectlombok:lombok:1.18.32'
-            annotationProcessor 'org.projectlombok:lombok:1.18.32'
-            testCompileOnly 'org.projectlombok:lombok:1.18.32'
-            testAnnotationProcessor 'org.projectlombok:lombok:1.18.32'
+            compileOnly "org.projectlombok:lombok:$lombokVersion"
+            annotationProcessor "org.projectlombok:lombok:$lombokVersion"
+            testCompileOnly "org.projectlombok:lombok:$lombokVersion"
+            testAnnotationProcessor "org.projectlombok:lombok:$lombokVersion"
         }
         test{
             useJUnitPlatform()
