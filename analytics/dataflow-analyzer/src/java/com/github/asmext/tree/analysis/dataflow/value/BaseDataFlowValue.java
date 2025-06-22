@@ -51,7 +51,7 @@ public sealed abstract class BaseDataFlowValue extends DataFlowValue permits Bas
     }
 
 
-    public DataFlowValue copied(AbstractInsnNode insn) {
+    public CommonDataFlowValue copied(AbstractInsnNode insn) {
         return new CommonDataFlowValue(type, insn, new DataFlowValue[]{this}, true);
     }
 

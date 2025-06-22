@@ -1,5 +1,6 @@
 package com.github.asmext.tree.analysis.dataflow;
 
+import com.github.asmext.tree.analysis.dataflow.interpreter.DataFlowInterpreter;
 import com.github.asmext.tree.analysis.dataflow.value.DataFlowValue;
 import com.github.asmext.tree.analysis.dataflow.interpreter.handlers.DupOpcodeHandler;
 import com.github.asmext.tree.analysis.dataflow.interpreter.handlers.PopOpcodeHandler;
@@ -19,9 +20,37 @@ import org.objectweb.asm.util.Printer;
 
 import java.lang.reflect.Field;
 
+/**
+ * A specialized {@link Frame} used in JVM bytecode data flow analysis.
+ * <p>
+ * {@code DataFlowFrame} extends ASM's {@link Frame} to add support for:
+ * <ul>
+ *     <li>Tracking instruction index and source indices for better diagnostics and debugging</li>
+ *     <li>Handling of advanced stack operations like {@code POP}, {@code DUP}, {@code SWAP} with custom metadata</li>
+ *     <li>Capturing recently popped values via {@link #justPopped} to assist post-pop analysis</li>
+ *     <li>Interacting with {@link PopOpcodeHandler}, {@link DupOpcodeHandler}, and {@link SwapOpcodeHandler}
+ *     for custom interpreter behavior</li>
+ * </ul>
+ *
+ * <p>
+ *
+ * @see org.objectweb.asm.tree.analysis.Frame
+ * @see DataFlowAnalyzer
+ * @see DataFlowInterpreter
+ * @see PopOpcodeHandler
+ * @see DupOpcodeHandler
+ * @see SwapOpcodeHandler
+ * @see DupType
+ * @see PopType
+ *
+ * @author Zelaux
+ * @since 2025.06
+ */
 public class DataFlowFrame extends Frame<DataFlowValue> implements Opcodes {
     int index;
     int sourceIndex;
+    private final SwapOpcodeHandler.SwapResult<DataFlowValue> tmpSwapResult=new SwapOpcodeHandler.SwapResult<>();
+
     public DataFlowFrame(Frame<? extends DataFlowValue> frame) {
         super(frame);
     }
@@ -53,43 +82,36 @@ public class DataFlowFrame extends Frame<DataFlowValue> implements Opcodes {
         resetState();
     }
 
-    @Override
-    public boolean merge(Frame<? extends DataFlowValue> frame0, Interpreter<DataFlowValue> interpreter) throws AnalyzerException {
-        DataFlowFrame newFrame = (DataFlowFrame) frame0;
-        int stackSize = getStackSize();
-        if(stackSize != newFrame.getStackSize()) {
-            throw new AnalyzerException(null, "Incompatible stack heights");
-        }
-        return super.merge(newFrame, interpreter);
-    }
 
-    @Override
-    public boolean merge(Frame<? extends DataFlowValue> frame, boolean[] localsUsed) {
-        return super.merge(frame, localsUsed);
-    }
-
-    public static AnalyzerException illegalUse(String extraInfo, AbstractInsnNode insn) throws AnalyzerException {
-        String opcode = Printer.OPCODES[Math.max(0, insn.getOpcode())];
-        throw new AnalyzerException(insn, "Idllegal use of " + opcode + ": " + extraInfo);
-    }
-
-    private static AnalyzerException illegalUse(AbstractInsnNode insn) throws AnalyzerException {
-        return illegalUse(insn, Printer.OPCODES[Math.max(0, insn.getOpcode())]);
-    }
-
-    private static AnalyzerException illegalUse(AbstractInsnNode insn, String pop1) throws AnalyzerException {
-        throw new AnalyzerException(insn, "Illegal use of " + pop1);
-    }
-
+    /**
+     * Executes a single instruction on this frame with optional metadata-aware processing for certain opcodes.
+     * <p>
+     * This method overrides ASM's default execution behavior to support extended semantics for stack operations,
+     * specifically:
+     * <ul>
+     *     <li>{@code POP}, {@code POP2} — processed via {@link PopOpcodeHandler}</li>
+     *     <li>{@code DUP}, {@code DUP_X1}, {@code DUP_X2}, {@code DUP2}, {@code DUP2_X1}, {@code DUP2_X2} —
+     *         processed via {@link DupOpcodeHandler}</li>
+     *     <li>{@code SWAP} — processed via {@link SwapOpcodeHandler}</li>
+     * </ul>
+     * If the provided {@link Interpreter} implements the corresponding handler interface, this method delegates
+     * processing of the instruction to it, enabling custom tracking and transformation of {@link DataFlowValue} instances.
+     * <p>
+     * For all other opcodes, the base class implementation is used.
+     *
+     * <p><b>Note:</b> Also tracks the most recently popped values via {@link #justPopped} to support post-pop analysis.</p>
+     *
+     * @param insn the instruction to execute
+     * @param interpreter the interpreter handling symbolic execution
+     * @throws AnalyzerException if the instruction is invalid or cannot be executed
+     */
     @Override
     public void execute(AbstractInsnNode insn, Interpreter<DataFlowValue> interpreter) throws AnalyzerException {
         resetState();
         //noinspection MagicConstant
         @MagicConstant(valuesFromClass = Opcodes.class)
         int opcode = insn.getOpcode();
-//        int wasStackSize = getStackSize();
-        this.index = TMP_LIST.indexOf(insn);
-//        System.out.println("StackBefore("+Printer.OPCODES[insn.getOpcode()]+"): "+getStackSize());
+        index = TMP_LIST.indexOf(insn);
         try {
             switch(opcode) {
                 case POP -> {
@@ -118,17 +140,18 @@ public class DataFlowFrame extends Frame<DataFlowValue> implements Opcodes {
                      DUP2_X1,
                      DUP2_X2 -> processDup(opcode, insn, interpreter);
                 case SWAP -> {
-                    //noinspection rawtypes
                     if(interpreter instanceof SwapOpcodeHandler<?>) {
-                        DataFlowValue value2 = pop();
-                        DataFlowValue value1 = pop();
-                        if(value1.getSize() != 1 || value2.getSize() != 1) {
+                        DataFlowValue topValue = pop();
+                        DataFlowValue bottomValue = pop();
+                        if(bottomValue.getSize() != 1 || topValue.getSize() != 1) {
                             throw illegalUse(insn);
                         }
                         //noinspection unchecked
                         var x = (SwapOpcodeHandler<DataFlowValue>) interpreter;
-                        push(x.swapOpcode(insn, false, value1, value2));
-                        push(x.swapOpcode(insn, true, value1, value2));
+                        SwapOpcodeHandler.SwapResult<DataFlowValue> result = x.handleSwapOpcode(insn, bottomValue, topValue, tmpSwapResult);
+                        push(result.bottom);
+                        push(result.top);
+                        result.reset();
                     } else super.execute(insn, interpreter);
                 }
                 default -> super.execute(insn, interpreter);
@@ -174,7 +197,7 @@ public class DataFlowFrame extends Frame<DataFlowValue> implements Opcodes {
 
         DupType dupType = DupType.fromOpcode(opcode);
         assert dupType != null;
-        DupType.DubCallback<DataFlowValue> callback;
+        DupType.DupCallback<DataFlowValue> callback;
         //noinspection rawtypes
         if(interpreter instanceof DupOpcodeHandler __advancedDupProcess) {
             //noinspection unchecked,UnnecessaryLocalVariable
@@ -191,5 +214,16 @@ public class DataFlowFrame extends Frame<DataFlowValue> implements Opcodes {
 
     }
 
+    public static AnalyzerException illegalUse(String extraInfo, AbstractInsnNode insn) throws AnalyzerException {
+        String opcode = Printer.OPCODES[Math.max(0, insn.getOpcode())];
+        throw new AnalyzerException(insn, "Illegal use of " + opcode + ": " + extraInfo);
+    }
 
+    private static AnalyzerException illegalUse(AbstractInsnNode insn) throws AnalyzerException {
+        return illegalUse(insn, Printer.OPCODES[Math.max(0, insn.getOpcode())]);
+    }
+
+    private static AnalyzerException illegalUse(AbstractInsnNode insn, String pop1) throws AnalyzerException {
+        throw new AnalyzerException(insn, "Illegal use of " + pop1);
+    }
 }

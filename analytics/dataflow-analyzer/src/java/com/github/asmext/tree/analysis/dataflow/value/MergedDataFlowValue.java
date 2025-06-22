@@ -48,7 +48,7 @@ public final class MergedDataFlowValue extends DataFlowValue {
     }
 
     @Override
-    public DataFlowValue copied(AbstractInsnNode insn) {
+    public CommonDataFlowValue copied(AbstractInsnNode insn) {
         if(type == null)
             return new SizedCommonDataFlowValue(NotADataFlowValue.instance.type, insn, new DataFlowValue[]{this}, true, getSize());
         return new CommonDataFlowValue(type, insn, new DataFlowValue[]{this}, true);

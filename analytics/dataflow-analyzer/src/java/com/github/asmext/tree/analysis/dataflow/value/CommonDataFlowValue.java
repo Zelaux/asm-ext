@@ -51,7 +51,7 @@ public non-sealed class CommonDataFlowValue extends BaseDataFlowValue {
     }
 
 
-    public DataFlowValue copied(AbstractInsnNode insn) {
+    public CommonDataFlowValue copied(AbstractInsnNode insn) {
         return new CommonDataFlowValue(type, insn, new DataFlowValue[]{this}, true);
     }
 

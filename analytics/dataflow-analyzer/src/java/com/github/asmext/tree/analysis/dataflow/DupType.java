@@ -1,7 +1,9 @@
 package com.github.asmext.tree.analysis.dataflow;
 
+import com.github.asmext.tree.analysis.dataflow.interpreter.handlers.DupOpcodeHandler;
 import lombok.RequiredArgsConstructor;
 import org.intellij.lang.annotations.MagicConstant;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
@@ -10,17 +12,27 @@ import org.objectweb.asm.tree.analysis.Value;
 
 import static com.github.asmext.tree.analysis.dataflow.DataFlowFrame.illegalUse;
 /**
- * Enum representing JVM bytecode operations for duplicating values on the operand stack.<br>
- * <br>
- * Stack notation:<br>
- * - o1, o2: Original values (top of stack is o1)<br>
- * - m1, m2: Middle values (deeper in stack)<br>
- * - d1, d2: Duplicated copies of original values<br>
- * <br>
- * All operations preserve the original values and insert duplicates at specific positions.
- */
+ * Enum representing JVM bytecode duplication instructions such as {@code DUP}, {@code DUP2}, and their variants.
+ *
+ * <p>Stack notation:
+ * <ul>
+ *   <li>{@code o1, o2} — original values at the top of the stack (o1 is topmost)</li>
+ *   <li>{@code m1, m2} — middle values over which duplicates are inserted</li>
+ *   <li>{@code d1, d2} — duplicates of {@code o1, o2}</li>
+ * </ul>
+ *
+ * @see #processDuplication(AbstractInsnNode, Frame, DupCallback, int, int)
+ * @see DupOpcodeHandler
+ * @see <a href="https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html#jvms-6.5.dup">JVM Spec §6.5 DUP</a>
+ * @see <a href="https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html#jvms-6.5.dup_x1">JVM Spec §6.5 DUP_X1</a>
+ * @see <a href="https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html#jvms-6.5.dup_x2">JVM Spec §6.5 DUP_X2</a>
+ * @see <a href="https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html#jvms-6.5.dup2">JVM Spec §6.5 DUP2</a>
+ * @see <a href="https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html#jvms-6.5.dup2_x1">JVM Spec §6.5 DUP2_X1</a>
+ * @see <a href="https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html#jvms-6.5.dup2_x2">JVM Spec §6.5 DUP2_X2</a>
+ * */
 @RequiredArgsConstructor
 public enum DupType {
+
     /** [..., o1] → [..., o1, d1] */
     DUP(Opcodes.DUP, 1, 0),
 
@@ -44,15 +56,27 @@ public enum DupType {
     public final int size;
     @MagicConstant(intValues = {0, 1, 2})
     public final int shift;
-    private Object[] tmpArray;
 
+    @Nullable
     public static DupType fromOpcode(int opcode) {
         if(opcode < Opcodes.DUP || opcode > Opcodes.DUP2_X2) return null;
         return VALUES[opcode - Opcodes.DUP];
     }
 
-
-    public static <T extends Value> void processDuplication(AbstractInsnNode insn, Frame<T> frame, DubCallback<T> callback, int sizeOfDuplication, int shiftOfDuplication) throws AnalyzerException {
+    /**
+     * Performs a generic duplication transformation, modeling the effect of a {@code DUP}-style bytecode instruction.
+     * <p>
+     * Pops the necessary values from the frame, verifies type sizes (single or double-word), and invokes
+     * the given {@link DupCallback} with values in the order they would be re-pushed to the stack.
+     *
+     * @param insn                the instruction node representing the duplication opcode
+     * @param frame               the analysis frame representing the current stack
+     * @param callback            a callback invoked with values in push order
+     * @param sizeOfDuplication   number of values to duplicate (1 or 2)
+     * @param shiftOfDuplication  how deep to insert the duplicate (0–2)
+     * @throws AnalyzerException if stack state or types are invalid
+     */
+    public static <T extends Value> void processDuplication(AbstractInsnNode insn, Frame<T> frame, DupCallback<T> callback, int sizeOfDuplication, int shiftOfDuplication) throws AnalyzerException {
         T read1 = frame.pop();
         T read2 = null;
         boolean oneRead;
@@ -93,8 +117,12 @@ public enum DupType {
     private static String sizeMismatch(int expected, int actual) {
         return "Expected stack top " + expected + "size but found " + actual + "size";
     }
-
-    private static <T extends Value> void pushValue(DubCallback<T> callback, boolean oneRead, T read1, T read2, @MagicConstant(intValues = {0, 1, 2}) int shift, T shift1, T shift2) throws AnalyzerException {
+    /**
+     * Pushes values to the callback in the correct order according to the duplication semantics.
+     * <p>
+     * This includes original values, any middle/shifted values, and finally the duplicated copies.
+     */
+    private static <T extends Value> void pushValue(DupCallback<T> callback, boolean oneRead, T read1, T read2, @MagicConstant(intValues = {0, 1, 2}) int shift, T shift1, T shift2) throws AnalyzerException {
         if(oneRead) {
             callback.push(read1, ObjectKind.Original, 0);
 
@@ -112,7 +140,7 @@ public enum DupType {
         }
     }
 
-    private static <T extends Value> void pushShift(DubCallback<T> callback, @MagicConstant(intValues = {0, 1, 2}) int shift, T shift1, T shift2) throws AnalyzerException {
+    private static <T extends Value> void pushShift(DupCallback<T> callback, @MagicConstant(intValues = {0, 1, 2}) int shift, T shift1, T shift2) throws AnalyzerException {
         switch(shift) {
             case 0 -> {}
             case 1 -> callback.push(shift1, ObjectKind.MiddlePart, 0);
@@ -122,10 +150,16 @@ public enum DupType {
             }
         }
     }
-
+    /**
+     * Describes the role of a value in a {@link DupType} duplication pattern.
+     */
     public enum ObjectKind {
+        /**Duplicated copy inserted into the stack*/
         Duplicate,
+
+        /** A value over which the duplicates are inserted (shift/middle part) */
         MiddlePart,
+        /**Original value before duplication*/
         Original;
 
         public boolean shiftedPart() {
@@ -137,7 +171,19 @@ public enum DupType {
         }
     }
 
-    public interface DubCallback<T> {
-        void push(T value, ObjectKind kind, int index) throws AnalyzerException;
+    public interface DupCallback<T> {
+        /**
+         * Invoked once for each value involved in the duplication pattern, in the exact order
+         * values would be pushed to the stack after the duplication instruction.
+         *
+         * @param value the value being pushed
+         * @param kind  the role of the value (original, duplicate, or middle part)
+         * @param index the logical index within its kind:<br>
+         *              {@code 0} for {@code o1}/{@code d1}/{@code m1},<br>
+         *              {@code 1} for {@code o2}/{@code d2}/{@code m2}
+         *
+         * @throws AnalyzerException if the push operation cannot be completed
+         */
+        void push(T value, ObjectKind kind,@MagicConstant(intValues = {0,1}) int index) throws AnalyzerException;
     }
 }

@@ -28,7 +28,7 @@ public class NotADataFlowValue extends CommonDataFlowValue {
     }
 
     @Override
-    public DataFlowValue copied(AbstractInsnNode insn) {
+    public NotADataFlowValue copied(AbstractInsnNode insn) {
         return this;
     }
 

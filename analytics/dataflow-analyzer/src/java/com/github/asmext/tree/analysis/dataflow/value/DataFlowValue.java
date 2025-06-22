@@ -128,7 +128,7 @@ public sealed abstract class DataFlowValue implements Value
     @Override
     public abstract int getSize();
 
-    public abstract DataFlowValue copied(AbstractInsnNode insn);
+    public abstract CommonDataFlowValue copied(AbstractInsnNode insn);
 
     /**
      * <p>Attempts to deeply merge this value with another value.</p>

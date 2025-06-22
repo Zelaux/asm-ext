@@ -1,5 +1,6 @@
 package com.github.asmext.tree.analysis.dataflow.interpreter;
 
+import com.github.asmext.tree.analysis.dataflow.DataFlowAnalyzer;
 import com.github.asmext.tree.analysis.dataflow.DupType;
 import com.github.asmext.tree.analysis.dataflow.PopType;
 import com.github.asmext.tree.analysis.dataflow.interpreter.handlers.DupOpcodeHandler;
@@ -7,7 +8,7 @@ import com.github.asmext.tree.analysis.dataflow.interpreter.handlers.PopOpcodeHa
 import com.github.asmext.tree.analysis.dataflow.interpreter.handlers.SwapOpcodeHandler;
 import com.github.asmext.tree.analysis.dataflow.meta.*;
 
-import com.github.asmext.tree.analysis.dataflow.value.DataFlowValue;
+import com.github.asmext.tree.analysis.dataflow.value.*;
 import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ConstantDynamic;
 import org.objectweb.asm.Handle;
@@ -21,7 +22,34 @@ import org.objectweb.asm.tree.analysis.Interpreter;
 import java.util.List;
 
 import static org.objectweb.asm.tree.analysis.BasicInterpreter.NULL_TYPE;
-
+/**
+ * A custom {@link Interpreter} implementation used for data flow analysis over JVM bytecode.
+ * <p>
+ * This interpreter extends ASM's {@link Interpreter} and operates on {@link DataFlowValue} values,
+ * tracking additional metadata for various bytecode-level operations.
+ * <p>
+ * The purpose of this interpreter is to analyze stack-based JVM bytecode with enhanced tracking of:
+ * <ul>
+ *     <li>Constants and their types ({@link ConstMeta})</li>
+ *     <li>Duplication and popping behavior ({@link DupMeta}, {@link PopMeta})</li>
+ *     <li>Variable load/store operations ({@link LoadMeta}, {@link StoreMeta})</li>
+ *     <li>Value swaps ({@link SwapMeta})</li>
+ * </ul>
+ * *
+ * <p>
+ * This class is typically used by a {@link DataFlowAnalyzer} to perform symbolic execution of bytecode,
+ * enabling optimizations, verifications, or transformations based on instruction semantics and tracked metadata.
+ *
+ * @see DataFlowValue
+ * @see CommonDataFlowValue
+ * @see BaseDataFlowValue.ParameterValue
+ * @see BaseDataFlowValue.ReturnValue
+ * @see MergedDataFlowValue
+ * @see org.objectweb.asm.tree.analysis.Interpreter
+ * @see org.objectweb.asm.tree.analysis.Analyzer
+ *
+ * @author Zelaux
+ */
 public class DataFlowInterpreter extends Interpreter<DataFlowValue> implements Opcodes,
     DupOpcodeHandler<DataFlowValue>,
     PopOpcodeHandler<DataFlowValue>,
@@ -318,9 +346,9 @@ public class DataFlowInterpreter extends Interpreter<DataFlowValue> implements O
     }
 
     @Override
-    public DataFlowValue copyOperation(AbstractInsnNode insn, DataFlowValue value) throws AnalyzerException {
+    public CommonDataFlowValue copyOperation(AbstractInsnNode insn, DataFlowValue value) throws AnalyzerException {
 
-        DataFlowValue copied = value.copied(insn);
+        CommonDataFlowValue copied = value.copied(insn);
         int opcode = insn.getOpcode();
         if(ILOAD <= opcode && opcode <= ALOAD) {
             VarInsnNode varInsnNode = (VarInsnNode) insn;
@@ -339,12 +367,15 @@ public class DataFlowInterpreter extends Interpreter<DataFlowValue> implements O
     }
 
     @Override
-    public DataFlowValue swapOpcode(AbstractInsnNode insn, boolean first, DataFlowValue value1, DataFlowValue value2) throws AnalyzerException {
-        DataFlowValue v = first ? value1 : value2;
-        DataFlowValue copied = copyOperation(insn, v);
-        copied.putMeta(SwapMeta.meta, new SwapMeta(value1, value2, first));
-        return copied;
+    public SwapResult<DataFlowValue> handleSwapOpcode(AbstractInsnNode swapInsn, DataFlowValue bottomValue, DataFlowValue topValue, @NotNull SwapResult<DataFlowValue> result) throws AnalyzerException {
+        CommonDataFlowValue newTop = copyOperation(swapInsn, bottomValue);
+        CommonDataFlowValue newBottom = copyOperation(swapInsn, topValue);
+        newTop.putMeta(SwapMeta.meta, new SwapMeta(newBottom, newTop, true));
+        newBottom.putMeta(SwapMeta.meta, new SwapMeta(newBottom, newTop, false));
+
+        return result.set(newBottom, newTop);
     }
+
 
 
 }

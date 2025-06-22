@@ -1,12 +1,22 @@
 package com.github.asmext.tree.analysis.dataflow.meta;
 
 import com.github.asmext.tree.analysis.dataflow.interpreter.MetaDataKey;
+import com.github.asmext.tree.analysis.dataflow.value.CommonDataFlowValue;
 import com.github.asmext.tree.analysis.dataflow.value.DataFlowValue;
 
-public record SwapMeta(DataFlowValue v1, DataFlowValue v2, boolean isV1) {
+/**
+ * Represents values after swapping
+ */
+public record SwapMeta(CommonDataFlowValue bottomValue, CommonDataFlowValue topValue, boolean isTopAfterSwap) {
     public static final MetaDataKey<SwapMeta> meta = MetaDataKey.create();
 
-    public DataFlowValue value() {
-        return isV1 ? v1 : v2;
+
+    public DataFlowValue afterSwapSelf() {
+        return isTopAfterSwap ? topValue : bottomValue;
     }
+
+    public DataFlowValue afterSwapSibling() {
+        return !isTopAfterSwap ? topValue : bottomValue;
+    }
+
 }
