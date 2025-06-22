@@ -2,6 +2,7 @@ package com.github.asmext.tree.analysis.dataflow.util.analyzer;
 
 import com.github.asmext.tree.analysis.dataflow.TestAsmUtil;
 import com.github.asmext.tree.analysis.dataflow.util.analyzer.bytecode.BytecodeProvider;
+import com.github.asmext.tree.analysis.dataflow.util.analyzer.bytecode.IfAndLoopBytecode;
 import com.github.asmext.tree.analysis.dataflow.util.analyzer.bytecode.IfBytecode;
 import com.github.asmext.tree.analysis.dataflow.util.analyzer.bytecode.InifiniteLoopDumpClass;
 import com.github.asmext.tree.analysis.dataflow.DataFlowAnalyzer;
@@ -44,7 +45,8 @@ public class AnalyzerTest extends AbstractHistoryAnalyzerTest {
     private static Stream<BytecodeProvider> providers() {
         return Stream.of(
             new IfBytecode(),
-            new InifiniteLoopDumpClass()
+            new InifiniteLoopDumpClass(),
+            new IfAndLoopBytecode()
         );
     }
 

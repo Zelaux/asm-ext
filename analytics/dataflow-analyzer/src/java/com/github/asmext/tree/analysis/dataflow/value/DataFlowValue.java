@@ -62,20 +62,7 @@ public sealed abstract class DataFlowValue implements Value
         DataFlowValue deepMerge = oldValue.deepMerge(newValue, mergeContext);
         if(deepMerge != null) return deepMerge;
         if(newValue instanceof BaseDataFlowValue newBaseValue) return oldValue.merge(newBaseValue, mergeContext);
-        //Bytecode example
-        //ICONST_0
-        //L0
-        //DUP
-        //IF DUP > 0 L1
-        //ICONST_1
-        //IADD
-        //GOTO L2
-        //ICONST_M1
-        //IADD
-        //L2
-        //GOTO L0
-        //
-        //
+
 
         if(oldValue instanceof BaseDataFlowValue base && newValue instanceof MergedDataFlowValue merged) {
             return merged.merge(base, mergeContext);
