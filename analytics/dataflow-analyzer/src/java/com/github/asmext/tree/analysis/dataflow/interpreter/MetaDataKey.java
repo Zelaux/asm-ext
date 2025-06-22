@@ -13,7 +13,7 @@ public class MetaDataKey<T> {
 
     public static <T> MetaDataKey<T> createThreadSafe() {
         int key;
-        synchronized(MetaDataKey.create()) {
+        synchronized(MetaDataKey.class) {
             key = keys++;
         }
         return new MetaDataKey<>(key);
