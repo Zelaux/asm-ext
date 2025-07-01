@@ -2,17 +2,43 @@ package asmlib.util;
 
 import asmlib.dev.annotations.AsmVersion;
 import lombok.SneakyThrows;
-import org.jetbrains.annotations.*;
-import org.objectweb.asm.*;
-import org.objectweb.asm.tree.*;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AnnotationNode;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.MethodNode;
 
 import java.io.IOException;
-import java.lang.annotation.*;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.List;
+import java.util.stream.Stream;
 
 public class NodeUtil {
+    public static AnnotationNode findAnnotation(@NotNull Stream<AnnotationNode> stream, Class<? extends Annotation> annotationClass) {
+        return findAnnotation(stream, Type.getDescriptor(annotationClass));
+    }
+
+    public static AnnotationNode findAnnotation(@NotNull Stream<AnnotationNode> stream, String annotationDescriptor) {
+        return stream.filter(it -> it.desc.equals(annotationDescriptor)).findFirst().orElse(null);
+    }
+
+    @SafeVarargs
+    public static AnnotationNode findAnnotation(Class<? extends Annotation> annotationClass, @Nullable List<AnnotationNode>... lists) {return findAnnotation(Type.getDescriptor(annotationClass), lists);}
+    @SafeVarargs
+    public static AnnotationNode findAnnotation(String annotationDescriptor, @Nullable List<AnnotationNode>... lists) {
+        for (@Nullable List<AnnotationNode> list : lists) {
+            if (list == null) continue;
+            AnnotationNode found = findAnnotation(list, annotationDescriptor);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
     public static AnnotationNode findAnnotation(@Nullable List<AnnotationNode> list, Class<? extends Annotation> annotationClass) {
+        if (list == null) return null;
         return findAnnotation(list, Type.getDescriptor(annotationClass));
     }
 
@@ -29,6 +55,7 @@ public class NodeUtil {
         ClassReader cr = new ClassReader(clazz.getName());
         return classNode(cr, api);
     }
+
     @NotNull
     public static ClassNode classNode(byte[] bytes, @AsmVersion int api) {
         ClassReader cr = new ClassReader(bytes);
