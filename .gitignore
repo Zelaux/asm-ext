@@ -1,3 +1,6 @@
+sandbox/**
+
+
 compiler/
 **/gitignore/**
 **/ignore/**

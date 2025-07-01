@@ -18,3 +18,7 @@ include "util:post-visitor"
 include "util:node"
 include "util:classfile-metadata"
 
+def scriptPath = getClass().protectionDomain.codeSource.location.path
+if(new File(new File(scriptPath),"sandbox")){
+    include("sand"+"box")
+}
