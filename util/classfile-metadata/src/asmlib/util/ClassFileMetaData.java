@@ -66,8 +66,7 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
         String className = utf8s[classIdx];
         String methodName = utf8s[nameIdx];
         String descriptor = utf8s[descIdx];
-        ClassMethod method = new ClassMethod(className, methodName, descriptor, types[i] == INTERFACE_METHOD);
-        return method;
+        return new ClassMethod(className, methodName, descriptor, types[i] == INTERFACE_METHOD);
     }
 
     public Stream<ClassField> usedFields() {
@@ -85,8 +84,7 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
         int nameAndTypeIndex = readValue(offsets[typeIdx] + 2);
         int nameIdx = readValue(offsets[nameAndTypeIndex]);
         int descIdx = readValue(offsets[nameAndTypeIndex] + 2);
-        ClassField e = new ClassField(utf8s[classIdx], utf8s[nameIdx], utf8s[descIdx]);
-        return e;
+        return new ClassField(utf8s[classIdx], utf8s[nameIdx], utf8s[descIdx]);
     }
 
     public boolean usesClass(Class<?> clazz) {
