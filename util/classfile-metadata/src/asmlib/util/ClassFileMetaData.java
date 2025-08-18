@@ -51,32 +51,42 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
         List<ClassMethod> list = new ArrayList<>();
         for (int typeI = 1; typeI < maxPoolSize; ++typeI) {
             if (!isMethod(typeI)) continue;
-            int classNameIndex = readValue(offsets[typeI]);
-            int classIdx = readValue(offsets[classNameIndex]);
-            int nameAndTypeIdx = readValue(offsets[typeI] + 2);
-            int nameIdx = readValue(offsets[nameAndTypeIdx]);
-            int descIdx = readValue(offsets[nameAndTypeIdx] + 2);
-            String className = utf8s[classIdx];
-            String methodName = utf8s[nameIdx];
-            String descriptor = utf8s[descIdx];
-            list.add(new ClassMethod(className, methodName, descriptor, types[typeI] == INTERFACE_METHOD));
+            list.add(readMethod(typeI));
         }
 
         return list.stream();
+    }
+
+    protected @NotNull ClassMethod readMethod(int i) {
+        int classNameIndex = readValue(offsets[i]);
+        int classIdx = readValue(offsets[classNameIndex]);
+        int nameAndTypeIdx = readValue(offsets[i] + 2);
+        int nameIdx = readValue(offsets[nameAndTypeIdx]);
+        int descIdx = readValue(offsets[nameAndTypeIdx] + 2);
+        String className = utf8s[classIdx];
+        String methodName = utf8s[nameIdx];
+        String descriptor = utf8s[descIdx];
+        ClassMethod method = new ClassMethod(className, methodName, descriptor, types[i] == INTERFACE_METHOD);
+        return method;
     }
 
     public Stream<ClassField> usedFields() {
         List<ClassField> list = new ArrayList<>();
         for (int typeIdx = 1; typeIdx < maxPoolSize; ++typeIdx) {
             if (types[typeIdx] != FIELD) continue;
-            int classNameIndexIndex = readValue(offsets[typeIdx]);
-            int classIdx = readValue(offsets[classNameIndexIndex]);
-            int nameAndTypeIndex = readValue(offsets[typeIdx] + 2);
-            int nameIdx = readValue(offsets[nameAndTypeIndex]);
-            int descIdx = readValue(offsets[nameAndTypeIndex] + 2);
-            list.add(new ClassField(utf8s[classIdx], utf8s[nameIdx], utf8s[descIdx]));
+            list.add(readField(typeIdx));
         }
         return list.stream();
+    }
+
+    protected @NotNull ClassField readField(int typeIdx) {
+        int classNameIndexIndex = readValue(offsets[typeIdx]);
+        int classIdx = readValue(offsets[classNameIndexIndex]);
+        int nameAndTypeIndex = readValue(offsets[typeIdx] + 2);
+        int nameIdx = readValue(offsets[nameAndTypeIndex]);
+        int descIdx = readValue(offsets[nameAndTypeIndex] + 2);
+        ClassField e = new ClassField(utf8s[classIdx], utf8s[nameIdx], utf8s[descIdx]);
+        return e;
     }
 
     public boolean usesClass(Class<?> clazz) {
