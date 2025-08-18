@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.experimental.FieldDefaults;
+import org.jetbrains.annotations.NotNull;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -71,10 +72,12 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
         List<ClassField> list = new ArrayList<>();
         for (int typeIdx = 1; typeIdx < maxPoolSize; ++typeIdx) {
             if (types[typeIdx] != FIELD) continue;
-            int classIdx = readValue(offsets[typeIdx]);
+            int classNameIndexIndex = readValue(offsets[typeIdx]);
+            int classIdx = readValue(offsets[classNameIndexIndex]);
             int nameAndTypeIndex = readValue(offsets[typeIdx] + 2);
             int nameIdx = readValue(offsets[nameAndTypeIndex]);
-            list.add(new ClassField(utf8s[classIdx], utf8s[nameIdx]));
+            int descIdx = readValue(offsets[nameAndTypeIndex] + 2);
+            list.add(new ClassField(utf8s[classIdx], utf8s[nameIdx], utf8s[descIdx]));
         }
         return list.stream();
     }
@@ -110,6 +113,12 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
     public static class ClassField {
         String owner;
         String name;
+        String desc;
+
+        @Override
+        public String toString() {
+            return owner + "." + name+": "+desc;
+        }
     }
 
     @SuppressWarnings("ClassCanBeRecord")
@@ -124,7 +133,11 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
 
         @Override
         public String toString() {
-            return owner + "#" + name + descriptor + (isInterface ? "[i]" : "");
+            return fullDescriptor() + (isInterface ? "[interface]" : "");
+        }
+
+        private @NotNull String fullDescriptor() {
+            return owner + "#" + name + descriptor;
         }
     }
 }
