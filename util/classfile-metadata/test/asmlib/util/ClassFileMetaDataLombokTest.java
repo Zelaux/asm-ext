@@ -14,10 +14,10 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ClassFileMetaDataLombokTest {
-    private static ClassFileMetaDataLombok foo = create(Foo.class);
-    private static ClassFileMetaDataLombok bar = create(Bar.class);
-    private static ClassFileMetaDataLombok baz = create(Baz.class);
-    private static ClassFileMetaDataLombok buux = create(Buux.class);
+    private final static ClassFileMetaDataLombok foo = create(Foo.class);
+    private final static ClassFileMetaDataLombok bar = create(Bar.class);
+    private final static ClassFileMetaDataLombok baz = create(Baz.class);
+    private final static ClassFileMetaDataLombok buux = create(Buux.class);
 
 
     static ClassFileMetaDataLombok create(Class<?> clazz) {
@@ -102,6 +102,7 @@ class ClassFileMetaDataLombokTest {
         assertEquals("java/util/Map", barInterfaces.get(1));
     }
 
+    @SuppressWarnings("UnnecessaryUnicodeEscape")
     @Test
     public void testContainsStringConstant() {
         assertTrue(foo.containsStringConstant("Eén"));

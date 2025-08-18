@@ -1,6 +1,5 @@
 package asmlib.util.testclasses;
 
-import java.io.PrintStream;
 import java.util.List;
 
 @SuppressWarnings("ALL")

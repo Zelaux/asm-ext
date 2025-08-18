@@ -76,6 +76,7 @@ class ClassFileMetaDataTest {
                 UTF8""", toMatrix(meta.typesAsString(), 11));
     }
 
+    @SuppressWarnings("SameParameterValue")
     @SneakyThrows
     private static @NotNull String toMatrix(String[] elements, int targetWidth) {
         int resultLen = (elements.length + targetWidth - 1) / targetWidth;
