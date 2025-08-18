@@ -57,6 +57,13 @@ class ClassFileMetaDataTest {
     }
 
     @Test
+    void usesClass() {
+        assertTrue(meta.usesAnnotation(Deprecated.class));
+        assertTrue(meta.usesAnnotation("Ljava/lang/Deprecated;"));
+        assertFalse(meta.usesAnnotation(FunctionalInterface.class));
+        assertFalse(meta.usesAnnotation("Ljava/lang/FunctionalInterface;"));
+    }
+    @Test
     void usesAnnotation() {
         assertTrue(meta.usesAnnotation(Deprecated.class));
         assertTrue(meta.usesAnnotation("Ljava/lang/Deprecated;"));

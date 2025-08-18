@@ -1,9 +1,6 @@
 package asmlib.util;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.SneakyThrows;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.jetbrains.annotations.NotNull;
 
@@ -82,6 +79,14 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
         return list.stream();
     }
 
+    public boolean usesClass(Class<?> clazz) {
+        return usesClass(clazz.getName().replace('.', '/'));
+    }
+
+    public boolean usesClass(String internalName) {
+        return findClass(internalName) != -1;
+    }
+
     public Stream<String> usedClasses() {
         List<String> list = new ArrayList<>();
         for (int typeI = 0; typeI < types.length; typeI++) {
@@ -109,7 +114,9 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
 
     @SuppressWarnings("ClassCanBeRecord")
     @AllArgsConstructor
+    @Getter
     @FieldDefaults(level = AccessLevel.PUBLIC, makeFinal = true)
+    @EqualsAndHashCode
     public static class ClassField {
         String owner;
         String name;
@@ -117,7 +124,7 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
 
         @Override
         public String toString() {
-            return owner + "." + name+": "+desc;
+            return owner + "." + name + ": " + desc;
         }
     }
 
@@ -125,6 +132,7 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
     @AllArgsConstructor
     @FieldDefaults(level = AccessLevel.PUBLIC, makeFinal = true)
     @Getter
+    @EqualsAndHashCode
     public static class ClassMethod {
         String owner;
         String name;
