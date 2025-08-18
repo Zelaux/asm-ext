@@ -1,6 +1,9 @@
 package asmlib.util;
 
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.SneakyThrows;
 import lombok.experimental.FieldDefaults;
 
 import java.lang.annotation.Annotation;
@@ -12,11 +15,13 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 public class ClassFileMetaData extends ClassFileMetaDataLombok {
 
     private static final String[] typeToName;
     @SuppressWarnings("FieldCanBeLocal")
     private final String[] typesAsStrings;
+
     static {
         //noinspection Convert2Lambda
         Map<String, Byte> fields = Arrays.stream(ClassFileMetaDataLombok.class.getDeclaredFields())
@@ -46,16 +51,17 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
 
     public Stream<ClassMethod> usedMethods() {
         List<ClassMethod> list = new ArrayList<>();
-        for (int typeI = 1; typeI < this.maxPoolSize; ++typeI) {
-            if (!this.isMethod(typeI)) continue;
-            int classIdx = this.readValue(this.offsets[typeI]);
-            int nameAndTypeIdx = this.readValue(this.offsets[typeI] + 2);
-            int nameIdx = this.readValue(this.offsets[nameAndTypeIdx]);
-            int descIdx = this.readValue(this.offsets[nameAndTypeIdx] + 2);
+        for (int typeI = 1; typeI < maxPoolSize; ++typeI) {
+            if (!isMethod(typeI)) continue;
+            int classNameIndex = readValue(offsets[typeI]);
+            int classIdx = readValue(offsets[classNameIndex]);
+            int nameAndTypeIdx = readValue(offsets[typeI] + 2);
+            int nameIdx = readValue(offsets[nameAndTypeIdx]);
+            int descIdx = readValue(offsets[nameAndTypeIdx] + 2);
             String className = utf8s[classIdx];
             String methodName = utf8s[nameIdx];
             String descriptor = utf8s[descIdx];
-            list.add(new ClassMethod(className, methodName, descriptor, typeI == INTERFACE_METHOD));
+            list.add(new ClassMethod(className, methodName, descriptor, types[typeI] == INTERFACE_METHOD));
         }
 
         return list.stream();
@@ -63,11 +69,11 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
 
     public Stream<ClassField> usedFields() {
         List<ClassField> list = new ArrayList<>();
-        for (int typeIdx = 1; typeIdx < this.maxPoolSize; ++typeIdx) {
-            if (this.types[typeIdx] != FIELD) continue;
-            int classIdx = this.readValue(this.offsets[typeIdx]);
-            int nameAndTypeIndex = this.readValue(this.offsets[typeIdx] + 2);
-            int nameIdx = this.readValue(this.offsets[nameAndTypeIndex]);
+        for (int typeIdx = 1; typeIdx < maxPoolSize; ++typeIdx) {
+            if (types[typeIdx] != FIELD) continue;
+            int classIdx = readValue(offsets[typeIdx]);
+            int nameAndTypeIndex = readValue(offsets[typeIdx] + 2);
+            int nameIdx = readValue(offsets[nameAndTypeIndex]);
             list.add(new ClassField(utf8s[classIdx], utf8s[nameIdx]));
         }
         return list.stream();
@@ -115,5 +121,10 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
         String name;
         String descriptor;
         boolean isInterface;
+
+        @Override
+        public String toString() {
+            return owner + "#" + name + descriptor + (isInterface ? "[i]" : "");
+        }
     }
 }
