@@ -130,7 +130,7 @@ public class DispatcherGenerator implements Opcodes {
                     int varIndex = dispatcherMethod.realVarIndex(i);
                     Type paramType = method.parameters[i];
                     if (dispatcherParameters[i].equals(paramType)) {
-                        loadInsn(mv, paramType, varIndex);
+//                        loadInsn(mv, paramType, varIndex);
                         continue;
                     }
                     addInstanceCheck(mv, varIndex, paramType, finalLabel);
@@ -141,7 +141,11 @@ public class DispatcherGenerator implements Opcodes {
                 for (int i = 0; i < parametersAmount; i++) {
                     int varIndex = dispatcherMethod.realVarIndex(i);
                     Type paramType = method.parameters[i];
-                    addLoadCast(mv, varIndex, paramType);
+                    if (paramType.equals(dispatcherParameters[i])) {
+                        loadInsn(mv, paramType, varIndex);
+                    } else {
+                        addLoadCast(mv, varIndex, paramType);
+                    }
                 }
                 invokeMethod(mv, method);
                 // Null if parametersAmount == 0
