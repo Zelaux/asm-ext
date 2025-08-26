@@ -1,0 +1,54 @@
+import org.gradle.initialization.SettingsScript
+import org.gradle.internal.scripts.ScriptOrigin
+
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+
+def transformIncludeString(String includeString) {
+
+    includeString = includeString.trim().replaceAll(/^include\s*$?\s*['"]?/, '').replaceAll(/['"]?\s*$?$/, '')
+    return includeString
+}
+
+
+private void includeSelf0(SettingsScript origin, File root) {
+
+    def settingsFile = new File(root, "settings.gradle")
+    def buildFile = new File(root, "build.gradle")
+    Pattern compile = Pattern.compile("group\\s*=\\s*\\(?\\s*['\"]?([^'\"\\s]+)['\"]\\s*\\)?\\s*")
+    Matcher matcher = compile.matcher(buildFile.text)
+    matcher.find()
+    def group =matcher.group(1)
+
+
+    def fileContent = settingsFile.text
+
+    def rootProjectName = (fileContent =~ /rootProject\.name\s*=\s*['"]([^'"]+)['"]/)[0][1]
+
+    def transformedIncludes = (fileContent =~ /include\s*(\(\s*['"]([^'"\s]+)['"]\s*\)|\s*['"]([^'"\s]+)['"]\s*)\s*/)
+            .collect { transformIncludeString(it[3]) }
+
+    origin.includeBuild("../", { ConfigurableIncludedBuild it1 ->
+        println "CONF1"
+        dependencySubstitution { DependencySubstitutions it ->
+            println "CONF2"
+            for (final def modulePath in transformedIncludes) {
+                def fullPath = group + ":" + modulePath.stripMargin(":").replace(':', '-')
+                println "module("+fullPath+") -> project("+modulePath+")"
+                it.substitute(it.module(fullPath)).using(it.project(":"+modulePath))
+            }
+            it.substitute(
+                    it.module("com.github.Zelaux.asm-ext.postprocessors:com.github.Zelaux.asm-ext.postprocessors.gradle.plugin")
+            ).using(it.project(":postprocessors:plugin"))
+        }
+    })
+
+}
+
+ext {
+    includeSelf = { SettingsScript settings,File root ->
+        includeSelf0(settings,root)
+
+        ext.includeSelf = null
+    }
+}
