@@ -1,0 +1,9 @@
+
+
+println "ISSSSS: "+project
+dependencies{
+    implementation(project(":util:dynamic-dispatch"))
+    implementation(project(":util:classfile-metadata"))
+    implementation(project(":util:node"))
+    compileOnly(project(":transformation:core"))
+}
