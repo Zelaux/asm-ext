@@ -1,17 +1,18 @@
 package com.github.asmext.util.dispatch;
 
 import lombok.Lombok;
+import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.*;
 
 import java.lang.ref.WeakReference;
-import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.WeakHashMap;
+import java.util.function.Supplier;
 
 public class DispatcherGenerator implements Opcodes {
 
@@ -20,19 +21,20 @@ public class DispatcherGenerator implements Opcodes {
     public static final Object[] EMPTY_OBJECT_ARRAY = {};
 
     public static <T> T generateDispatcher(Class<T> metaProcessorClass) {
+        return generateDispatcherSupplier(metaProcessorClass).get();
+    }
+
+    public static <T> Supplier<T> generateDispatcherSupplier(Class<T> metaProcessorClass) {
         byte[] bytes = generateDispatcherBytecode(metaProcessorClass);
         String className = metaProcessorClass.getName() + generatedPostfix;
         ByteCodeClassLoader instance = ByteCodeClassLoader.instanceFor(metaProcessorClass.getClassLoader());
         instance.addClass(className, bytes);
         try {
             Class<?> loaded = instance.loadClass(className);
-            //noinspection unchecked
-            return (T) loaded.getConstructors()[0].newInstance();
-        } catch(ClassNotFoundException | InstantiationException | IllegalAccessException |
-                InvocationTargetException e) {
+            return new MySupplier<>(loaded.getConstructors()[0]);
+        } catch (ClassNotFoundException e) {
             throw Lombok.sneakyThrow(e);
         }
-
     }
 
     public static <T> byte[] generateDispatcherBytecode(Class<T> metaProcessorClass) {
@@ -46,13 +48,13 @@ public class DispatcherGenerator implements Opcodes {
         //        ArrayList<Method> hubs=null;
         //TODO dispatch for multiple methods
         Method foundM = null;
-        for(Method method : methods) {
-            if(method.getAnnotation(DispatchHub.class) == null) continue;
-            if(foundM != null)
+        for (Method method : methods) {
+            if (method.getAnnotation(DispatchHub.class) == null) continue;
+            if (foundM != null)
                 throw new RuntimeException("Multiple @DispatchHub (<<" + foundM + ">> and <<" + method + ">>)");
             foundM = method;
         }
-        if(foundM == null) throw new RuntimeException("Cannot @DispatchHub method");
+        if (foundM == null) throw new RuntimeException("Cannot @DispatchHub method");
         return foundM;
     }
 
@@ -60,31 +62,21 @@ public class DispatcherGenerator implements Opcodes {
         Method[] methods = clazz.getDeclaredMethods();
         MethodInfo[] infos = new MethodInfo[methods.length];
         int actualSize = 0;
-        for(Method m : methods) {
-            if(!m.getName().equals(dispatchMethod.getName()) || m.getParameterCount() != dispatchMethod.getParameterCount() || dispatchMethod.equals(m))
+        for (Method m : methods) {
+            if (!m.getName().equals(dispatchMethod.getName()) || m.getParameterCount() != dispatchMethod.getParameterCount() || dispatchMethod.equals(m))
                 continue;
-            MethodInfo method = methodInfo(clazz, m);
+            MethodInfo method = MethodInfo.make(clazz, m);
             infos[actualSize++] = method;
         }
-        if(actualSize != infos.length) infos = Arrays.copyOf(infos, actualSize);
+        if (actualSize != infos.length) infos = Arrays.copyOf(infos, actualSize);
         return generateDispatcher(
-            Type.getType(clazz), infos, methodInfo(clazz, dispatchMethod)
-        );
-    }
-
-    private static MethodInfo methodInfo(Class<?> clazz, Method method) {
-        Type type = Type.getType(method);
-        return new MethodInfo(
-            Type.getType(clazz),
-            method.getName(),
-            Modifier.isStatic(method.getModifiers()),
-            type
+                Type.getType(clazz), infos, MethodInfo.make(clazz, dispatchMethod)
         );
     }
 
     public static byte[] generateDispatcher(
-        Type ownerType, MethodInfo[] methods,
-        MethodInfo dispatcherMethod
+            Type ownerType, MethodInfo[] methods,
+            MethodInfo dispatcherMethod
     ) {
         var cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
         //        var cw = new ClassWriter(0);
@@ -94,7 +86,17 @@ public class DispatcherGenerator implements Opcodes {
         cw.visitSource("MetaProcessor$disp.java", null);
         generateConstructor(cw, selfType, ownerType);
 
-        var mv = cw.visitMethod(ACC_PUBLIC, dispatcherMethod.name, dispatcherMethod.type.getDescriptor(), null, null);
+        generateDispatcherMethodBody(cw, selfType, ownerType, methods, dispatcherMethod, DefaultVariantKind.invokeSuper);
+
+        return cw.toByteArray();
+    }
+
+    public static void generateDispatcherMethodBody(ClassVisitor cw, Type selfType, Type ownerType, MethodInfo[] methods, MethodInfo dispatcherMethod, DefaultVariantKind kind) {
+        var mv = cw.visitMethod(ACC_PUBLIC,
+                dispatcherMethod.name,
+                dispatcherMethod.descriptor,
+                dispatcherMethod.signature,
+                dispatcherMethod.exceptions);
         mv.visitCode();
         //TODO add sorting
         Type[] dispatcherParameters = dispatcherMethod.parameters;
@@ -102,75 +104,53 @@ public class DispatcherGenerator implements Opcodes {
         Object[] localNames = new Object[parametersAmount + 1];
         {
             localNames[0] = selfType.getInternalName();
-            for(int i = 0; i < parametersAmount; i++) {
+            for (int i = 0; i < parametersAmount; i++) {
                 localNames[i + 1] = dispatcherParameters[i].getInternalName();
             }
         }
         {
             final Label[] endLabels = new Label[parametersAmount];
 
-            for(MethodInfo method : methods) {
+            for (MethodInfo method : methods) {
                 Arrays.fill(endLabels, null);
                 int extraPop;
-                if(method.isStatic) {
+                if (method.methodKind.isStatic()) {
                     extraPop = -1;
                 } else {
                     extraPop = 0;
-                    mv.visitVarInsn(ALOAD, 0);
+
                 }
-                Label finalLabel = null;
-                for(int i = 0; i < parametersAmount; i++) {
+                Label finalLabel = parametersAmount==0?null:new Label();
+
+                for (int i = 0; i < parametersAmount; i++) {
                     int varIndex = dispatcherMethod.realVarIndex(i);
                     Type paramType = method.parameters[i];
-                    if(dispatcherParameters[i].equals(paramType)) {
+                    if (dispatcherParameters[i].equals(paramType)) {
                         loadInsn(mv, paramType, varIndex);
                         continue;
                     }
-                    endLabels[i] = addInstanceCheck(mv, varIndex, paramType, endLabels[i]);
-                    finalLabel = new Label();
+                    addInstanceCheck(mv, varIndex, paramType,finalLabel);
+                }
+                if (extraPop==0) {
+                    mv.visitVarInsn(ALOAD, 0);
+                }
+                for (int i = 0; i < parametersAmount; i++) {
+                    int varIndex = dispatcherMethod.realVarIndex(i);
+                    Type paramType = method.parameters[i];
+                    addLoadCast(mv, varIndex, paramType);
                 }
                 invokeMethod(mv, method);
-
-                if(finalLabel != null) {
-                    //                    mv.visitJumpInsn(GOTO, finalLabel);
-
-                    int counter = 0;
-                    for(int i = 0; i < parametersAmount; i++) {
-                        Label label = endLabels[i];
-                        counter++;
-                        if(label == null) continue;
-                        mv.visitLabel(label);
-                        for(int __i = 0; __i < counter + extraPop; __i++) {
-                            mv.visitInsn(POP - 1 + dispatcherParameters[i - __i].getSize());
-                        }
-                        if(i + 1 < parametersAmount) mv.visitJumpInsn(GOTO, finalLabel);
-                    }
-
-                    mv.visitLabel(finalLabel);
-
-                }
+                // Null if parametersAmount == 0
+                if (finalLabel != null) mv.visitLabel(finalLabel);
             }
         }
 
 
-        mv.visitVarInsn(ALOAD, 0);
-        for(int i = 0; i < parametersAmount; i++) {
-            loadInsn(mv, dispatcherParameters[i], dispatcherMethod.realVarIndex(i));
-        }
-        mv.visitMethodInsn(
-            INVOKESPECIAL,
-            ownerType.getInternalName(),
-            dispatcherMethod.name,
-            dispatcherMethod.type.getDescriptor(),
-            false
-        );
-
-        mv.visitInsn(dispatcherMethod.returnType.getOpcode(IRETURN));
+        DefaultVariantKind kind0 = kind;
+        kind0.process(mv, ownerType, dispatcherParameters, dispatcherMethod);
 
         mv.visitMaxs(parametersAmount * 2, parametersAmount + 1);
         mv.visitEnd();
-
-        return cw.toByteArray();
     }
 
     private static Type getTypeFromName(String name) {
@@ -181,29 +161,32 @@ public class DispatcherGenerator implements Opcodes {
         return name.replace('.', '/');
     }
 
-    private static void loadInsn(MethodVisitor mv, Type type, int varIndex) {
+    static void loadInsn(MethodVisitor mv, Type type, int varIndex) {
         mv.visitVarInsn(type.getOpcode(ILOAD), varIndex);
     }
 
     private static @NotNull Label addInstanceCheck(MethodVisitor mv, int varIndex, Type type, @Nullable Label jumpLabel) {
-        if(jumpLabel == null) jumpLabel = new Label();
+        if (jumpLabel == null) jumpLabel = new Label();
         mv.visitVarInsn(ALOAD, varIndex);
         mv.visitTypeInsn(INSTANCEOF, type.getInternalName());
         mv.visitJumpInsn(IFEQ, jumpLabel);
+        return jumpLabel;
+    }
+
+    private static void addLoadCast(MethodVisitor mv, int varIndex, Type type) {
         mv.visitVarInsn(ALOAD, varIndex);
         mv.visitTypeInsn(CHECKCAST, type.getInternalName());
-        return jumpLabel;
     }
 
     private static void invokeMethod(MethodVisitor mv, MethodInfo methodInfo) {
         mv.visitMethodInsn(
-            methodInfo.invokeInstruction(),
-            methodInfo.owner.getInternalName(),
-            methodInfo.name,
-            methodInfo.type.getDescriptor(),
-            false);
+                methodInfo.invokeInstruction(),
+                methodInfo.owner.getInternalName(),
+                methodInfo.name,
+                methodInfo.descriptor,
+                methodInfo.methodKind.isInterface());
 
-        mv.visitInsn(methodInfo.type.getReturnType().getOpcode(IRETURN));
+        mv.visitInsn(methodInfo.returnType.getOpcode(IRETURN));
     }
 
     public static void load() {
@@ -225,20 +208,6 @@ public class DispatcherGenerator implements Opcodes {
         mv.visitEnd();
     }
 
-    public record MethodInfo(Type owner, String name, boolean isStatic, Type type, Type[] parameters, Type returnType) {
-        public MethodInfo(Type owner, String name, boolean isStatic, Type type) {
-            this(owner, name, isStatic, type, type.getArgumentTypes(), type.getReturnType());
-        }
-
-        public int invokeInstruction() {
-            return isStatic ? Opcodes.INVOKESTATIC : Opcodes.INVOKEVIRTUAL;
-        }
-
-        public int realVarIndex(int i) {
-            return isStatic ? i : i + 1;
-        }
-    }
-
     static class ByteCodeClassLoader extends ClassLoader {
         private static final ByteCodeClassLoader myInstance = new ByteCodeClassLoader(ByteCodeClassLoader.class.getClassLoader());
         private static final WeakHashMap<ClassLoader, WeakReference<ByteCodeClassLoader>> otherLoaders = new WeakHashMap<>();
@@ -250,10 +219,10 @@ public class DispatcherGenerator implements Opcodes {
         private final HashMap<String, byte[]> map = new HashMap<>();
 
         public static ByteCodeClassLoader instanceFor(ClassLoader classLoader) {
-            if(classLoader.getClass() == ByteCodeClassLoader.class) return myInstance;
+            if (classLoader.getClass() == ByteCodeClassLoader.class) return myInstance;
             return otherLoaders
-                .computeIfAbsent(classLoader, x -> new WeakReference<>(new ByteCodeClassLoader(x)))
-                .get();
+                    .computeIfAbsent(classLoader, x -> new WeakReference<>(new ByteCodeClassLoader(x)))
+                    .get();
         }
 
         public void addClass(String name, byte[] bytecode) {
@@ -263,8 +232,22 @@ public class DispatcherGenerator implements Opcodes {
         @Override
         protected Class<?> findClass(String name) throws ClassNotFoundException {
             byte[] bytecode = map.get(name);
-            if(bytecode == null) throw new ClassNotFoundException(name);
+            if (bytecode == null) throw new ClassNotFoundException(name);
             return defineClass(name, bytecode, 0, bytecode.length);
+        }
+    }
+
+    private static class MySupplier<T> implements Supplier<T> {
+        private final Constructor<?> constructor;
+
+        public MySupplier(Constructor<?> constructor) {this.constructor = constructor;}
+
+        @Override
+        @SneakyThrows
+        public T get() {
+            //noinspection unchecked
+
+            return (T) constructor.newInstance();
         }
     }
 }
