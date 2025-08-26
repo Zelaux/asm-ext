@@ -3,12 +3,13 @@ rootProject.name = 'asm-ext'
 //needs for EntryPoint
 include "dev-annotations"
 
-include("transformation:core")
+include "transformation:core"
 
 include "analytics:method-return"
 include "analytics:object-creation"
 include "analytics:dataflow-analyzer"
 
+include("postprocessors:plugin"+"")
 
 include "util:visitor"
 include "util:method"

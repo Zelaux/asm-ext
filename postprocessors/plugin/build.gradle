@@ -1,0 +1,27 @@
+plugins {
+    id 'java-gradle-plugin'//For plugin publish
+}
+//apply plugin: asmext.plugin.PostProcessorsPlugin
+
+repositories{
+    gradlePluginPortal()
+    mavenCentral()
+}
+
+gradlePlugin {
+    plugins {
+        simplePlugin {
+            id = 'com.github.Zelaux.asm-ext.postprocessors'
+            implementationClass = 'asmext.plugin.PostProcessorsPlugin'
+        }
+    }
+}
+
+
+dependencies {
+    compileOnly(gradleApi())
+//    implementation("org.gradle:gradle-core:${gradle.gradleVersion}")
+//    implementation("org.gradle:gradle-base-services:${gradle.gradleVersion}")
+
+    implementation(project(":transformation:core"))
+}

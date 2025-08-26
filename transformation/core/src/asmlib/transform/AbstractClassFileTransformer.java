@@ -3,29 +3,22 @@ package asmlib.transform;
 import org.jetbrains.annotations.*;
 
 @SuppressWarnings("unused")
-public abstract class AbstractClassFileTransformer implements ClassFileTransformer{
+public abstract class AbstractClassFileTransformer implements TransformationProvider {
     public int roundLeft;
     public int roundIndex;
 
-    public AbstractClassFileTransformer(int currentRound){
-        this.roundLeft = currentRound;
+    public AbstractClassFileTransformer(int maxRound){
+        this.roundLeft = maxRound;
     }
 
     @Override
-    public boolean shouldRead(@NotNull String className){
-        return false;
+    public void finishRound() {
+        roundLeft--;
+        roundIndex++;
     }
-
-    @Override
-    public boolean shouldWrite(@NotNull String className){
-        return false;
-    }
-
 
     @Override
     public boolean needNextRound(){
-        roundLeft--;
-        roundIndex++;
         return roundLeft > 0;
     }
 

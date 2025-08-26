@@ -9,6 +9,7 @@ import static asmlib.transform.file.FileTree.add;
 @Renderer(text = "this.classpathName()")
 @SuppressWarnings("unused")
 public class FileEntry {
+    public static final FileEntry[] EMPTY_ARRAY = new FileEntry[0];
     public final FileTree parent;
     public final File file;
 

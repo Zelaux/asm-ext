@@ -2,3 +2,6 @@
 dependencies{
     testImplementation(aproj("util:loader"))
 }
+
+
+easyPath()
