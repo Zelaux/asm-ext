@@ -6,6 +6,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.*;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -32,8 +34,10 @@ public class DispatcherGenerator implements Opcodes {
         try {
             Class<?> loaded = instance.loadClass(className);
             return new MySupplier<>(loaded.getConstructors()[0]);
-        } catch (ClassNotFoundException e) {
+        } catch (Exception e) {
             throw Lombok.sneakyThrow(e);
+        } catch (ClassFormatError e) {
+            throw e;
         }
     }
 
@@ -120,7 +124,7 @@ public class DispatcherGenerator implements Opcodes {
                     extraPop = 0;
 
                 }
-                Label finalLabel = parametersAmount==0?null:new Label();
+                Label finalLabel = parametersAmount == 0 ? null : new Label();
 
                 for (int i = 0; i < parametersAmount; i++) {
                     int varIndex = dispatcherMethod.realVarIndex(i);
@@ -129,9 +133,9 @@ public class DispatcherGenerator implements Opcodes {
                         loadInsn(mv, paramType, varIndex);
                         continue;
                     }
-                    addInstanceCheck(mv, varIndex, paramType,finalLabel);
+                    addInstanceCheck(mv, varIndex, paramType, finalLabel);
                 }
-                if (extraPop==0) {
+                if (extraPop == 0) {
                     mv.visitVarInsn(ALOAD, 0);
                 }
                 for (int i = 0; i < parametersAmount; i++) {
@@ -208,12 +212,29 @@ public class DispatcherGenerator implements Opcodes {
         mv.visitEnd();
     }
 
+    public static InputStream getByteCodeAsStream(Class<?> type) {
+        ClassLoader classLoader = type.getClassLoader();
+        if (!(classLoader instanceof ByteCodeClassLoader loader)) return null;
+        return new ByteArrayInputStream(loader.map.get(type.getName()));
+    }
+
     static class ByteCodeClassLoader extends ClassLoader {
         private static final ByteCodeClassLoader myInstance = new ByteCodeClassLoader(ByteCodeClassLoader.class.getClassLoader());
         private static final WeakHashMap<ClassLoader, WeakReference<ByteCodeClassLoader>> otherLoaders = new WeakHashMap<>();
+        public static final String CLASS_SUFFIX = ".class";
 
         protected ByteCodeClassLoader(ClassLoader parent) {
             super(parent);
+        }
+
+        @Override
+        public @Nullable InputStream getResourceAsStream(String name) {
+            if (name.endsWith(CLASS_SUFFIX)) {
+
+                byte[] bytes = map.get(name.replace('/', '.').substring(0, name.length() - CLASS_SUFFIX.length()));
+                if (bytes != null) return new ByteArrayInputStream(bytes);
+            }
+            return super.getResourceAsStream(name);
         }
 
         private final HashMap<String, byte[]> map = new HashMap<>();
