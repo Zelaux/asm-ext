@@ -1,0 +1,25 @@
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+}
+def MAIN_CLASS = 'asmext.tools.graph.Starter'
+application {
+    mainClass.set(MAIN_CLASS)
+}
+jar {
+    manifest {
+        attributes(
+                'Main-Class': MAIN_CLASS,
+                'Implementation-Title': 'Java Bytecode display',
+                'Implementation-Version': project.version
+        )
+    }
+}
+dependencies {
+    implementation(project(":util:node"))
+    implementation("io.github.jacksonbrienen:jwfd:0.9.0")
+}
