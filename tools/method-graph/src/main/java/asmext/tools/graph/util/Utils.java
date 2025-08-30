@@ -1,5 +1,6 @@
 package asmext.tools.graph.util;
 
+import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Label;
@@ -10,7 +11,6 @@ import org.objectweb.asm.util.TraceMethodVisitor;
 import java.awt.font.FontRenderContext;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -60,7 +60,8 @@ public class Utils {
                 fontRenderContext.getFractionalMetricsHint());
     }
 
-    public static byte @NotNull [] readBytes(File file) throws IOException {
+    @SneakyThrows
+    public static byte @NotNull [] readBytes(File file) {
         byte[] bytes;
         try (FileInputStream stream = new FileInputStream(file)) {
             bytes = stream.readAllBytes();

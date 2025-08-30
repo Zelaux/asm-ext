@@ -13,6 +13,6 @@ public interface Fonts {
     static Font loadFont(String name){
         Font font = Font.createFont(Font.TRUETYPE_FONT, Fonts.class.getClassLoader().getResourceAsStream(name));
 
-        return font.deriveFont(24f);
+        return font.deriveFont(12f);
     }
 }

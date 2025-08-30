@@ -22,6 +22,7 @@ public class ClassfileGraphApp extends JFrame {
     public final UIContext context;
     public final JMenu fileMenu;
     public final JMenuItem openItem;
+    public final JMenuItem reloadItem;
     public final JMenuItem exitItem;
     public final JMenu methodsMenu;
 
@@ -37,11 +38,16 @@ public class ClassfileGraphApp extends JFrame {
         openItem = new JMenuItem("Open");
         openItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, KeyEvent.CTRL_DOWN_MASK));
 
+        reloadItem = new JMenuItem("Reload");
+        reloadItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, KeyEvent.CTRL_DOWN_MASK));
+
         exitItem = new JMenuItem("Exit");
         exitItem.addActionListener(e -> System.exit(0));
         exitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, KeyEvent.CTRL_DOWN_MASK));
 
         fileMenu.add(openItem);
+//        fileMenu.add(recent);
+        fileMenu.add(reloadItem);
         fileMenu.addSeparator();
         fileMenu.add(exitItem);
 

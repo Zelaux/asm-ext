@@ -25,7 +25,7 @@ public class OpcodeEntry extends Element {
     public final AbstractInsnNode insnNode;
     public final ControlFlowNode controlFlowNode;
     public final Set<Label> labelSet;
-    public int margin = 4;
+    public int margin = 2;
     int textWidth;
     @Getter
     Textifier textifier;
