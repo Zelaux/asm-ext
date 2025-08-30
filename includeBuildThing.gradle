@@ -1,5 +1,4 @@
 import org.gradle.initialization.SettingsScript
-import org.gradle.internal.scripts.ScriptOrigin
 
 import java.util.regex.Matcher
 import java.util.regex.Pattern
@@ -11,14 +10,14 @@ def transformIncludeString(String includeString) {
 }
 
 
-private void includeSelf0(SettingsScript origin, File root) {
+private void includeSelf0(SettingsScript origin, File root, boolean doPrint) {
 
     def settingsFile = new File(root, "settings.gradle")
     def buildFile = new File(root, "build.gradle")
     Pattern compile = Pattern.compile("group\\s*=\\s*\\(?\\s*['\"]?([^'\"\\s]+)['\"]\\s*\\)?\\s*")
     Matcher matcher = compile.matcher(buildFile.text)
     matcher.find()
-    def group =matcher.group(1)
+    def group = matcher.group(1)
 
 
     def fileContent = settingsFile.text
@@ -26,16 +25,16 @@ private void includeSelf0(SettingsScript origin, File root) {
     def rootProjectName = (fileContent =~ /rootProject\.name\s*=\s*['"]([^'"]+)['"]/)[0][1]
 
     def transformedIncludes = (fileContent =~ /include\s*(\(\s*['"]([^'"\s]+)['"]\s*\)|\s*['"]([^'"\s]+)['"]\s*)\s*/)
-            .collect { transformIncludeString(it[3]) }
+            .collect { transformIncludeString(Objects.requireNonNullElse(it[3], it[2])) }
 
-    origin.includeBuild("../", { ConfigurableIncludedBuild it1 ->
-        println "CONF1"
+    origin.includeBuild(root.getAbsolutePath(), { ConfigurableIncludedBuild it1 ->
+        if (doPrint) println "CONF1"
         dependencySubstitution { DependencySubstitutions it ->
-            println "CONF2"
+            if (doPrint) println "CONF2"
             for (final def modulePath in transformedIncludes) {
                 def fullPath = group + ":" + modulePath.stripMargin(":").replace(':', '-')
-                println "module("+fullPath+") -> project("+modulePath+")"
-                it.substitute(it.module(fullPath)).using(it.project(":"+modulePath))
+                if (doPrint) println "module(" + fullPath + ") -> project(" + modulePath + ")"
+                it.substitute(it.module(fullPath)).using(it.project(":" + modulePath))
             }
             it.substitute(
                     it.module("com.github.Zelaux.asm-ext.postprocessors:com.github.Zelaux.asm-ext.postprocessors.gradle.plugin")
@@ -46,8 +45,8 @@ private void includeSelf0(SettingsScript origin, File root) {
 }
 
 ext {
-    includeSelf = { SettingsScript settings,File root ->
-        includeSelf0(settings,root)
+    includeSelf = { SettingsScript settings, File root ->
+        includeSelf0(settings, root,false)
 
         ext.includeSelf = null
     }

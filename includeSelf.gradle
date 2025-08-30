@@ -22,7 +22,7 @@ private void includeSelf0(File root){
 
     def rootProjectName = (fileContent =~ /rootProject\.name\s*=\s*['"]([^'"]+)['"]/)[0][1]
 
-    def transformedIncludes = (fileContent =~ /include\s*\(?\s*['"]?([^'"\s]+)['"]\s*\)?\s*/)
+    def transformedIncludes = (fileContent =~ /include\s*(\(\s*['"]([^'"\s]+)['"]\s*\)|\s*['"]([^'"\s]+)['"]\s*)\s*/)
             .collect{ transformIncludeString(it[1]) }
 
 
