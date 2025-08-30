@@ -4,6 +4,7 @@ import asmext.tools.graph.ui.*;
 import asmext.tools.graph.ui.elem.Group;
 import asmext.tools.graph.ui.opcode.OpcodePane;
 import lombok.SneakyThrows;
+import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
@@ -13,7 +14,7 @@ import java.util.ArrayList;
 
 import static asmext.tools.graph.ui.opcode.OpcodeEntry.opcodeEntry;
 
-public class LayoutBuilder {
+public class OldLayoutBuilder {
     @SneakyThrows
     public static void buildLayout(Group mainGroup, ClassNode classNode, UIContext context) {
         MethodNode methodNode = classNode.methods.get(0);
@@ -28,6 +29,29 @@ public class LayoutBuilder {
         analyzer.analyze(classNode.name, methodNode);
         var nodes = analyzer.getNodes();
         context.maxIndex=nodes.length;
+        ArrayList<NodeGroup> groups = makeGroups(nodes);
+
+        int y = 0;
+        Textifier textifier = new Textifier();
+        for (NodeGroup group : groups) {
+            var pane = new OpcodePane(0, y);
+            for (ControlFlowNode insnNode : group.nodes) {
+                pane.add(opcodeEntry(insnNode, textifier));
+            }
+
+            pane.layout(context);
+
+
+            y += pane.height + 10;
+            mainGroup.add(pane);
+        }
+//        makeGroup(mainGroup, 0, nodes, y, textifier);
+//        for (AbstractInsnNode node : methodNode.instructions) {
+//            group.add(opcodeEntry(node, textifier).fillX(true));
+//        }
+    }
+
+    private static @NotNull ArrayList<NodeGroup> makeGroups(ControlFlowNode[] nodes) {
         ArrayList<NodeGroup> groups = new ArrayList<>();
         {
             int prevStart = 0;
@@ -52,25 +76,7 @@ public class LayoutBuilder {
                 i = endIndex;
             }
         }
-
-        int y = 0;
-        Textifier textifier = new Textifier();
-        for (NodeGroup group : groups) {
-            var pane = new OpcodePane(0, y);
-            for (ControlFlowNode insnNode : group.nodes) {
-                pane.add(opcodeEntry(insnNode, textifier));
-            }
-
-            pane.layout(context);
-
-
-            y += pane.height + 10;
-            mainGroup.add(pane);
-        }
-//        makeGroup(mainGroup, 0, nodes, y, textifier);
-//        for (AbstractInsnNode node : methodNode.instructions) {
-//            group.add(opcodeEntry(node, textifier).fillX(true));
-//        }
+        return groups;
     }
 
 }
