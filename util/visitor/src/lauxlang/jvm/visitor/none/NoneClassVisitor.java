@@ -1,4 +1,4 @@
-package lauxlang.jvm.visitor.none;
+package asmext.jvm.visitor.none;
 
 import org.objectweb.asm.*;
 

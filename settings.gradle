@@ -10,9 +10,9 @@ include "analytics:object-creation"
 include "analytics:dataflow-analyzer"
 
 include("postprocessors:plugin"+"")
+include("postprocessors:dynamic-dispatch1")
 
 
-include "postprocessors:dynamic-dispatch1"
 include "util:visitor"
 include "util:method"
 include "util:loader"

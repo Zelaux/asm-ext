@@ -1,8 +1,8 @@
-package lauxlang.jvm.visitor.multi;
+package asmext.jvm.visitor.multi;
 
 import org.objectweb.asm.*;
 
-import static lauxlang.jvm.visitor.multi.MultiVisitors.visitSub;
+import static asmext.jvm.visitor.multi.MultiVisitors.visitSub;
 
 public class MultiFieldVisitor extends FieldVisitor{
     private final FieldVisitor[] visitors;

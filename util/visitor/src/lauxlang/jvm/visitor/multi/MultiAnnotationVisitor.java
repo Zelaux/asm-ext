@@ -1,4 +1,4 @@
-package lauxlang.jvm.visitor.multi;
+package asmext.jvm.visitor.multi;
 
 import org.objectweb.asm.*;
 
