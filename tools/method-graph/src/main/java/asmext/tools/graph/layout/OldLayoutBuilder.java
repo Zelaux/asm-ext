@@ -34,10 +34,8 @@ public class OldLayoutBuilder {
         int y = 0;
         Textifier textifier = new Textifier();
         for (NodeGroup group : groups) {
-            var pane = new OpcodePane(0, y);
-            for (ControlFlowNode insnNode : group.nodes) {
-                pane.add(opcodeEntry(insnNode, textifier));
-            }
+            var pane = paneForGroup(group, textifier);
+            pane.y=y;
 
             pane.layout(context);
 
@@ -51,14 +49,22 @@ public class OldLayoutBuilder {
 //        }
     }
 
-    private static @NotNull ArrayList<NodeGroup> makeGroups(ControlFlowNode[] nodes) {
+     static @NotNull OpcodePane paneForGroup(NodeGroup group, Textifier textifier) {
+        var pane = new OpcodePane(0, 0);
+        for (ControlFlowNode insnNode : group.nodes) {
+            pane.add(opcodeEntry(insnNode, textifier));
+        }
+        return pane;
+    }
+
+    static @NotNull ArrayList<NodeGroup> makeGroups(ControlFlowNode[] nodes) {
         ArrayList<NodeGroup> groups = new ArrayList<>();
         {
             int prevStart = 0;
             for (int i = 0; i < nodes.length; i++) {
                 ControlFlowNode node = nodes[i];
-                NodeKind kind = node.kind();
-                if (kind == NodeKind.Simple) continue;
+                FullNodeKind kind = node.kind();
+                if (kind == FullNodeKind.Simple) continue;
                 int endIndex = !kind.isMerge() ? i + 1 : i;
 
                 ControlFlowNode[] groupNodes = new ControlFlowNode[endIndex - prevStart];
@@ -67,7 +73,6 @@ public class OldLayoutBuilder {
                 }
                 groups.add(new NodeGroup(
                         nodes[endIndex - 1].simpleNext,
-                        kind,
                         groupNodes,
                         nodes[endIndex - 1].gotoNext.copy(),
                         nodes[prevStart].previous.copy()

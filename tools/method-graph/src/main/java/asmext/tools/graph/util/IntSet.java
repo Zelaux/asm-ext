@@ -1,7 +1,10 @@
 package asmext.tools.graph.util;
 
+import org.jetbrains.annotations.Debug;
+
 import java.util.Arrays;
 
+@Debug.Renderer(text = "\"IntSet[\"+size+\"]\"",childrenArray = "toArray()",hasChildren = "true")
 public class IntSet {
     private int[] table;
     private boolean[] used;
@@ -19,6 +22,16 @@ public class IntSet {
         this.size = other.size;
         this.table = Arrays.copyOf(other.table, other.table.length);
         this.used = Arrays.copyOf(other.used, other.used.length);
+    }
+
+    public int[] toArray() {
+        int[] ints = new int[size];
+        IntIterator iterator = iterator();
+
+        for (int i = 0; i < ints.length; i++) {
+            ints[i] = iterator.next();
+        }
+        return ints;
     }
 
     public IntSet copy() {
@@ -101,7 +114,7 @@ public class IntSet {
             current++;
         }
         if (current >= capacity) throw new IllegalStateException("No more elements");
-        return  table[current];
+        return table[current];
     }
 
     // Кастомный итератор по int

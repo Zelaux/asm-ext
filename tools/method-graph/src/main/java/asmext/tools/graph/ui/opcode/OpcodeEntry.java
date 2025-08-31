@@ -6,7 +6,7 @@ import asmext.tools.graph.ui.HighlightHandler;
 import asmext.tools.graph.ui.UIContext;
 import asmext.tools.graph.ui.elem.Element;
 import asmext.tools.graph.ui.style.Style;
-import asmext.tools.graph.util.BoundingBox;
+import asmext.tools.graph.util.BoundsRect;
 import asmext.tools.graph.util.Utils;
 import lombok.Getter;
 import org.objectweb.asm.Label;
@@ -65,7 +65,7 @@ public class OpcodeEntry extends Element {
         return this;
     }
 
-    public BoundingBox layout(UIContext context) {
+    public BoundsRect layout(UIContext context) {
         text = Utils.toString(insnNode, textifier);
         text = text.split("\n")[0];
         super.layout(context);
@@ -77,7 +77,7 @@ public class OpcodeEntry extends Element {
         textHeight = height;
         width += margin * 2;
         height += margin * 2;
-        return BoundingBox.fromRect(width, height);
+        return BoundsRect.fromRect(width, height);
     }
 
     @Override
@@ -100,7 +100,6 @@ public class OpcodeEntry extends Element {
 
     @Override
     public void draw(Graphics2D g2d, UIContext context) {
-
         if (drawBounds) {
             g2d.setStroke(new BasicStroke(1));
             g2d.setColor(Color.red);
@@ -108,7 +107,6 @@ public class OpcodeEntry extends Element {
             g2d.setColor(Color.green);
             g2d.drawRect(x + margin, y + margin, width - margin * 2, height - margin * 2);
         }
-
 //        g2d.setColor(new Color(0x2B2D30));
         Style style = context.style;
         if (hover) {

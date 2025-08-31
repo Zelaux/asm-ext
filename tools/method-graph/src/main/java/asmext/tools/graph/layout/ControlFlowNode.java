@@ -2,7 +2,6 @@ package asmext.tools.graph.layout;
 
 import asmext.tools.graph.util.IntSet;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
 public class ControlFlowNode {
@@ -17,21 +16,14 @@ public class ControlFlowNode {
         this.myIndex = myIndex;
     }
 
-    public NodeKind kind() {
-        NodeKind kind = getNonMergedKind();
-        return previous.size() < 2 ? kind : kind.merged();
+    public FullNodeKind kind() {
+        var kind = getNonMergedKind();
+        return previous.size() < 2 ? kind.fullType() : kind.merged();
     }
-@NotNull
+
+    @NotNull
     private NodeKind getNonMergedKind() {
-        if (simpleNext == -1 && gotoNext.isEmpty()) return NodeKind.End;
-        if (simpleNext != -1 && gotoNext.isEmpty()) return NodeKind.Simple;
-        if (simpleNext != -1 && gotoNext.isOne())
-            return gotoNext.first() >= myIndex ? NodeKind.IfStmt : NodeKind.IfLoop;
-        int size = gotoNext.size();
-        if (simpleNext == -1 && size > 0) {
-            if (size > 1) return NodeKind.Switch;
-            return gotoNext.first() >= myIndex ? NodeKind.Goto : NodeKind.GotoLoop;
-        }
-        throw new UnsupportedOperationException();
+        return NodeKind.getNodeKind(simpleNext != -1, gotoNext, myIndex);
     }
+
 }

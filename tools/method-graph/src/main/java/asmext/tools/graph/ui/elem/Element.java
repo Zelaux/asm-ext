@@ -1,10 +1,12 @@
 package asmext.tools.graph.ui.elem;
 
 import asmext.tools.graph.Fonts;
+import asmext.tools.graph.ui.layout.LayoutProperties;
 import asmext.tools.graph.ui.UIContext;
-import asmext.tools.graph.util.BoundingBox;
+import asmext.tools.graph.util.BoundsRect;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.awt.geom.Rectangle2D;
@@ -13,9 +15,20 @@ import java.awt.geom.Rectangle2D;
 public class Element {
     int x, y;
     int width, height;
-    boolean fillX, fillY;
+    LayoutProperties layoutProperties= createLayoutProperties();
+
+    protected @NotNull LayoutProperties createLayoutProperties() {
+        return new LayoutProperties();
+    }
+
     String text;
+    ElementWithChild parent;
     public boolean drawBounds;
+
+    public Element(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
 
     public Element(int x, int y, int width, int height) {
         this.x = x;
@@ -33,12 +46,12 @@ public class Element {
     }
 
     public Element fillX(boolean fillX) {
-        this.fillX = fillX;
+        layoutProperties.fillX = fillX;
         return this;
     }
 
     public Element fillY(boolean fillY) {
-        this.fillY = fillY;
+        layoutProperties.fillY = fillY;
         return this;
     }
 
@@ -52,11 +65,11 @@ public class Element {
 
     }
 
-    public BoundingBox layout(UIContext context) {
+    public BoundsRect layout(UIContext context) {
         Rectangle2D bb = Fonts.jetbrainsLigature.getStringBounds(text, Fonts.defaultContext[0]);
         width = (int) (bb.getWidth() + 0.5f);
         height = (int) (bb.getHeight() + 0.5f);
-        return BoundingBox.fromRect(width,height);
+        return BoundsRect.fromRect(width,height);
     }
 
     public void draw(Graphics2D g2d, UIContext context) {
@@ -68,4 +81,8 @@ public class Element {
         g2d.drawString(text, x, y + height);
     }
 
+    public Element centered() {
+        layoutProperties.centered=true;
+        return this;
+    }
 }

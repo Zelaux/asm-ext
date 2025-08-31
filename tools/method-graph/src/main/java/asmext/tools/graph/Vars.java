@@ -1,12 +1,13 @@
 package asmext.tools.graph;
 
 import asmext.tools.graph.ui.elem.Group;
+import asmext.tools.graph.ui.layout.LayoutDirection;
 import lombok.SneakyThrows;
 
 import java.io.File;
 
 public interface Vars {
-    Group mainGroup = new Group(0, 0, 100, 100, Group.LayoutDirection.NoLayout);
+    Group mainGroup = new Group(0, 0, 100, 100, LayoutDirection.NoLayout);
     File myPath = getMyPath();
     File openQueueFile = new File(myPath,"lastopen.txt");
 

@@ -1,5 +1,8 @@
 package asmext.tools.graph.layout;
 
+import asmext.tools.graph.util.IntSet;
+import org.jetbrains.annotations.NotNull;
+
 import static asmext.tools.graph.layout.NodeKindProperties.*;
 
 public enum NodeKind {
@@ -9,39 +12,34 @@ public enum NodeKind {
     Switch(MULTI_GOTO),
     Goto(GOTO_LABEL),
     GotoLoop(GOTO_LABEL | LOOP),
-    End(0),
-    MergePoint(Simple),
-    MergeIf(IfStmt),
-    MergeIfLoop(IfLoop),
-    MergeSwitch(Switch),
-    MergeGoto(Goto),
-    MergeGotoLoop(GotoLoop),
-    MergeEnd(End);
-    public static final int MERGE_START = MergePoint.ordinal();
+    End(0);
 
-    public final NodeKind nonMergeVariant;
     @NodeKindProperties
     public final int properties;
 
-    NodeKind(NodeKind nonMergeVariant, @NodeKindProperties int properties) {
-        this.nonMergeVariant = nonMergeVariant;
+    NodeKind(@NodeKindProperties int properties) {
         this.properties = properties;
     }
 
-    NodeKind(@NodeKindProperties int properties) {
-        this(null, properties);
+    public static @NotNull NodeKind getNodeKind(boolean hasNext, IntSet gotoNext1, int myIndex1) {
+        if (!hasNext && gotoNext1.isEmpty()) return End;
+        if (hasNext && gotoNext1.isEmpty()) return Simple;
+        if (hasNext && gotoNext1.isOne())
+            return gotoNext1.first() >= myIndex1 ? IfStmt : IfLoop;
+        int size = gotoNext1.size();
+        if (!hasNext && size > 0) {
+            if (size > 1) return Switch;
+            return gotoNext1.first() >= myIndex1 ? Goto : GotoLoop;
+        }
+        throw new UnsupportedOperationException();
     }
 
 
-    NodeKind(NodeKind variant) {
-        this(variant, variant.properties);
+    public FullNodeKind merged() {
+        return FullNodeKind.values()[ordinal() + FullNodeKind.MERGE_START];
     }
 
-    public boolean isMerge() {
-        return ordinal() >= MERGE_START;
-    }
-
-    public NodeKind merged() {
-        return NodeKind.values()[ordinal() + MERGE_START];
+    public FullNodeKind fullType() {
+        return FullNodeKind.values()[ordinal()];
     }
 }

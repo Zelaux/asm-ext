@@ -46,10 +46,14 @@ public class Utils {
     }
 
     public static String toString(AbstractInsnNode node, Textifier textifier) {
+
         node.accept(new TraceMethodVisitor(textifier));
         String trim = textifier.text.get(0).toString().trim();
         textifier.text.clear();
-
+        if (node instanceof FrameNode frameNode) {
+            int i = trim.indexOf('[');
+            if (i != -1) return trim.substring(0, i).trim();
+        }
         return trim;
     }
 

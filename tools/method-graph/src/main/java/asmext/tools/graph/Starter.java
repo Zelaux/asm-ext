@@ -1,5 +1,6 @@
 package asmext.tools.graph;
 
+import asmext.tools.graph.layout.LayoutBuilder;
 import asmext.tools.graph.layout.OldLayoutBuilder;
 import asmext.tools.graph.util.FIleChooserHook;
 import asmext.tools.graph.util.Utils;
@@ -116,7 +117,7 @@ public class Starter {
             this.selectedMethod = method;
             mainGroup.elements.clear();
             frame.setTitle(classNode.name + ": " + menuItem.getText());
-            OldLayoutBuilder.buildLayout(mainGroup, classNode, method, frame.context);
+            LayoutBuilder.buildLayout(mainGroup, classNode, method, frame.context);
             mainGroup.layout(frame.context);
             for (var other : methodItems) {
                 other.setEnabled(true);

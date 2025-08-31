@@ -1,13 +1,28 @@
 package asmext.tools.graph.ui.elem;
 
 import asmext.tools.graph.ui.UIContext;
-import asmext.tools.graph.util.BoundingBox;
+import asmext.tools.graph.ui.layout.ContainerLayoutProperties;
+import asmext.tools.graph.ui.layout.LayoutDirection;
+import asmext.tools.graph.util.BoundsRect;
+import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.function.Consumer;
 
-public class Group extends Element {
+public class Group extends ElementWithChild {
+
+    @Override
+    protected @NotNull ContainerLayoutProperties createLayoutProperties() {
+        return new ContainerLayoutProperties();
+    }
+    public final ContainerLayoutProperties containerLayout = (ContainerLayoutProperties) layoutProperties;
+    @Override
+    public void eachChild(Consumer<Element> visitor) {
+        elements.forEach(visitor);
+    }
+
     public final ArrayList<Element> elements = new ArrayList<>();
     public LayoutDirection layoutDirection;
 
@@ -16,24 +31,18 @@ public class Group extends Element {
         this.layoutDirection = layoutDirection;
     }
 
-    protected void updateChild(Element child, UIContext context) {
-        child.x += x;
-        child.y += y;
-        child.update(context);
-        child.x -= x;
-        child.y -= y;
-    }
-
-    protected void drawChild(Element child, Graphics2D g2d, UIContext context) {
-        child.x += x;
-        child.y += y;
-        child.draw(g2d, context);
-        child.x -= x;
-        child.y -= y;
+    public Group(LayoutDirection layoutDirection) {
+        this.layoutDirection = layoutDirection;
     }
 
     public Group add(Element... elements) {
         Collections.addAll(this.elements, elements);
+        for (Element element : elements) {
+            var prevParent = element.parent;
+            if (prevParent != null)
+                prevParent.removeChild(element);
+            element.parent = this;
+        }
         return this;
     }
 
@@ -58,61 +67,18 @@ public class Group extends Element {
         }
     }
 
+
     @Override
-    public BoundingBox layout(UIContext context) {
-        switch (layoutDirection) {
-            case Horizontal -> {
-                int height = 0;
-                int x = 0;
-                boolean hasFillY = false;
-                for (Element element : elements) {
-                    element.x = x;
-                    element.y = 0;
-                    element.layout(context);
-                    hasFillY |= element.fillY;
-                    height = Math.max(element.height, height);
-                    x += element.width + 1;
-                }
-                if (hasFillY) {
-                    for (Element element : elements) {
-                        if (element.fillY) element.height = height;
-                    }
-                }
-                this.width = x;
-                this.height = height;
-            }
-            case Vertical -> {
-                int width = 0;
-                int y = 0;
-                boolean hasFillX = false;
-                for (Element element : elements) {
-                    element.y = y;
-                    element.x = 0;
-                    element.layout(context);
-                    if (element.fillX) hasFillX = true;
-                    width = Math.max(element.width, width);
-                    y += element.height + 1;
-                }
-                if (hasFillX) {
-                    for (Element element : elements) {
-                        if (element.fillX) element.width = width;
-                    }
-                }
-                this.width = width;
-                this.height = y;
-            }
-            case NoLayout -> {
-                for (Element element : elements) {
-                    element.layout(context);
-                }
-            }
-        }
-        return BoundingBox.fromRect(width, height);
+    public BoundsRect layout(UIContext context) {
+        BoundsRect bb = layoutDirection.layout(containerLayout, elements, context);
+        width=bb.width();
+        height=bb.height();
+        return bb;
     }
 
-    public enum LayoutDirection {
-        Horizontal,
-        Vertical,
-        NoLayout;
+    @Override
+    public boolean removeChild(Element prevParent) {
+        return elements.remove(prevParent);
     }
+
 }
