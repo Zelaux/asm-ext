@@ -4,6 +4,8 @@ import asmext.tools.graph.layout.ControlFlowNode;
 import asmext.tools.graph.ui.opcode.OpcodeEntry;
 import asmext.tools.graph.util.Utils;
 import org.objectweb.asm.Label;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.JumpInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
 public class HighlightHandler {
@@ -28,6 +30,9 @@ public class HighlightHandler {
         int otherIndex = otherNode.myIndex;
         if (selfNode.previous.size() > 1 && selfNode.previous.contains(otherIndex)) return true;
         if (selfNode.gotoNext.contains(otherIndex)) return true;
+        if (selfNode.node instanceof JumpInsnNode jumpNode && jumpNode.getOpcode() != Opcodes.GOTO) {
+            if (selfNode.simpleNext == otherIndex) return true;
+        }
         return false;
     }
 
