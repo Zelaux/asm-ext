@@ -46,6 +46,17 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
         super(byteCode);
         typesAsStrings = typesAsString();
     }
+    public int access(){
+        return readValue(endOfPool);
+    }
+
+    public int endOfPool(){
+        return endOfPool;
+    }
+
+    public boolean usesMethod(Class<?> clazz, String methodName) {
+        return usesMethod(clazz.getName().replace('.', '/'), methodName);
+    }
 
     public Stream<ClassMethod> usedMethods() {
         List<ClassMethod> list = new ArrayList<>();
@@ -95,6 +106,7 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
         return findClass(internalName) != -1;
     }
 
+
     public Stream<String> usedClasses() {
         List<String> list = new ArrayList<>();
         for (int typeI = 0; typeI < types.length; typeI++) {
@@ -111,6 +123,9 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
     public boolean usesAnnotation(String descriptor) {
         return containsUtf8(descriptor);
     }
+    public String getUtf8(int index){
+        return utf8s[index];
+    }
 
     public String[] typesAsString() {
         String[] strings = new String[types.length];
@@ -119,6 +134,7 @@ public class ClassFileMetaData extends ClassFileMetaDataLombok {
         }
         return strings;
     }
+
 
     @SuppressWarnings("ClassCanBeRecord")
     @AllArgsConstructor
