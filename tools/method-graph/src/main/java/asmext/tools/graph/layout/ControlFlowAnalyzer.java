@@ -26,12 +26,13 @@ public class ControlFlowAnalyzer extends Analyzer<BasicValue> {
         instructionsArray = method.instructions.toArray();
         nodes = new ControlFlowNode[instructionsArray.length];
         for (int i = 0; i < nodes.length; i++) {
-            nodes[i] = new ControlFlowNode(instructionsArray[i],i);
+            nodes[i] = new ControlFlowNode(instructionsArray[i], i);
         }
         Frame<BasicValue>[] analyze = super.analyze(owner, method);
         return analyze;
     }
-    public ControlFlowNode[] getNodes(){
+
+    public ControlFlowNode[] getNodes() {
         return nodes;
     }
 
@@ -49,29 +50,30 @@ public class ControlFlowAnalyzer extends Analyzer<BasicValue> {
     protected void newControlFlowEdge(int insnIndex, int successorIndex) {
         ControlFlowNode curNode = nodes[insnIndex];
         ControlFlowNode nextNode = nodes[successorIndex];
-        setIndex:
-        {
-            nextNode.previous.add(insnIndex);
-            AbstractInsnNode insnNode = instructionsArray[insnIndex];
-            if (insnNode instanceof JumpInsnNode jumpInsnNode) {
-                if (mockList.indexOf(jumpInsnNode.label) == successorIndex) {
-                    curNode.gotoNext.add(successorIndex);
-                    break setIndex;
-                }
-            } else {
-                List<LabelNode> switchLabel = Utils.getSwitchLabels(insnNode);
-                if(switchLabel!=null){
-                    for (LabelNode node : switchLabel) {
-                        if (mockList.indexOf(node)==successorIndex) {
-                            curNode.gotoNext.add(successorIndex);
-                            break setIndex;
-                        }
+        setIndex(insnIndex, successorIndex, nextNode, curNode);
+        super.newControlFlowEdge(insnIndex, successorIndex);
+    }
+
+    private void setIndex(int insnIndex, int successorIndex, ControlFlowNode nextNode, ControlFlowNode curNode) {
+        nextNode.previous.add(insnIndex);
+        AbstractInsnNode insnNode = instructionsArray[insnIndex];
+        if (insnNode instanceof JumpInsnNode jumpInsnNode) {
+            if (mockList.indexOf(jumpInsnNode.label) == successorIndex) {
+                curNode.gotoNext.add(successorIndex);
+                return;
+            }
+        } else {
+            List<LabelNode> switchLabel = Utils.getSwitchLabels(insnNode);
+            if (switchLabel != null) {
+                for (LabelNode node : switchLabel) {
+                    if (mockList.indexOf(node) == successorIndex) {
+                        curNode.gotoNext.add(successorIndex);
+                        return;
                     }
                 }
             }
-            curNode.simpleNext = successorIndex;
         }
-        super.newControlFlowEdge(insnIndex, successorIndex);
+        curNode.simpleNext = successorIndex;
     }
 
     public static class MyFrame extends Frame<BasicValue> {

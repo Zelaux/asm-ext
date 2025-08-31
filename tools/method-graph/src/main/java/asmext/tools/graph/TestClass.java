@@ -3,10 +3,8 @@ package asmext.tools.graph;
 public class TestClass {
     TestClass() {
         System.out.println("Hello world");
-        if ((System.currentTimeMillis() & 1) == 0) {
-            System.out.println("Hello world1");
-        } else {
-            System.out.println("Hello world2");
+        while ((System.currentTimeMillis() & 31) < 16){
+            System.out.println("HelloTMP");
         }
         String x;
         if ((System.currentTimeMillis() & 1) == 0) {

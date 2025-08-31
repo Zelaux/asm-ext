@@ -6,7 +6,9 @@ import org.jetbrains.annotations.NotNull;
 public class NodeGroup {
     final int straitNextIndex;
     final FullNodeKind kind;
+    final ControlFlowNode first;
     final ControlFlowNode[] nodes;
+    final ControlFlowNode last;
     final IntSet gotoNext;
     final IntSet previous;
 
@@ -18,6 +20,8 @@ public class NodeGroup {
         this.straitNextIndex = straitNextIndex;
         this.kind = kind;
         this.nodes = nodes;
+        first = nodes[0];
+        last = nodes[nodes.length - 1];
         this.gotoNext = gotoNext;
         this.previous = previous;
 

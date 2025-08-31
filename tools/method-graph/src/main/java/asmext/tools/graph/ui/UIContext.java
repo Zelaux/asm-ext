@@ -15,4 +15,5 @@ public class UIContext {
     public OpcodeEntry hovered;
     public int maxIndex;
     public Style style = new Style();
+    public boolean useHorizontalMode;
 }

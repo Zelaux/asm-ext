@@ -3,8 +3,9 @@ package asmext.tools.graph.layout;
 import asmext.tools.graph.ui.UIContext;
 import asmext.tools.graph.ui.elem.Element;
 import asmext.tools.graph.ui.elem.Group;
-import asmext.tools.graph.ui.layout.LayoutDirection;
+import asmext.tools.graph.ui.layout.LayoutPlacement;
 import asmext.tools.graph.ui.opcode.groups.DoubleBranch;
+import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
@@ -21,13 +22,15 @@ public class LayoutBuilder {
         var nodes = analyzer.getNodes();
         context.maxIndex = nodes.length;
         ArrayList<NodeGroup> groups = OldLayoutBuilder.makeGroups(nodes);
-        Group group = new Group(0, 0, 0, 0, LayoutDirection.Vertical);
+        Group group = newVerticalGroup();
         mainGroup.add(group);
         Textifier textifier = new Textifier();
-        group.containerLayout.childGap = 10;
+        AlreadyBuiltEntry[] alreadyBuilt = new AlreadyBuiltEntry[groups.size()];
+        final boolean centered = context.useHorizontalMode;
         for (int[] i = {0}; i[0] < groups.size(); i[0]++) {
-            var group1 = buildGroup(groups, i, textifier);
-            group.add(group1.centered());
+            var group1 = buildGroup(groups, i, textifier, alreadyBuilt,centered);
+
+            group.add(group1.centered(centered));
         }
 
         mainGroup.layout(context);
@@ -35,49 +38,53 @@ public class LayoutBuilder {
 
     }
 
-    private static Element buildGroup(ArrayList<NodeGroup> groups, int[] i, Textifier textifier) {
-//        Group out = new Group(LayoutDirection.Vertical);
+    private static Element buildGroup(ArrayList<NodeGroup> groups, int[] i, Textifier textifier, AlreadyBuiltEntry[] alreadyBuilt, boolean centered) {
+//        Group out = new Group(LayoutPlacement.Vertical);
 //        out.containerLayout.childGap = 10;
-        for (; i[0] < groups.size(); i[0]++) {
-            NodeGroup group = groups.get(i[0]);
-            switch (group.kind.nonMerged()) {
-                case Simple -> {
-                    //Second branch in if stmt
-//                    if (!group.kind.isMerge())
-//                        throw new IllegalStateException("Unexpected value: " + group.kind);
+        int index = i[0];
+        if (index >= groups.size()) return null;
+        NodeGroup nodeGroup = groups.get(index);
+        Element element = switch (nodeGroup.kind.nonMerged()) {
+            case Simple -> paneForGroup(nodeGroup, textifier).centered(centered);
+            case IfStmt -> {
+                i[0]++;
+                if (alreadyBuilt[i[0]] != null) {
+                    Element element1 = paneForGroup(nodeGroup, textifier);
+                    yield element1.centered(centered);
+                }
 
-                    return paneForGroup(group, textifier).centered();
-                }
-                case IfStmt -> {
-                    Group group1 = new Group(LayoutDirection.Vertical);
-                    i[0]++;
-                    var left = buildGroup(groups, i, textifier);
-                    i[0]++;
-                    var right = buildGroup(groups, i, textifier);
+                Group group = newVerticalGroup();
+                Element element2 = paneForGroup(nodeGroup, textifier);
+                group.add(element2.centered(centered));
 
-                    group1.add(paneForGroup(group,textifier).centered());
-                    group1.add(new DoubleBranch(left, right).centered());
-                    return group1;
+                var left = buildGroup(groups, i, textifier, alreadyBuilt, centered);
+                i[0]++;
+                if (alreadyBuilt[i[0]] != null) {
+                    group.add(left);
+                    yield group;
                 }
-                case IfLoop -> {
-                    //TODO
-                    throw new UnsupportedOperationException();
-                }
-                case Switch -> {
-                    //TODO
-                    throw new UnsupportedOperationException();
-                }
-                case Goto -> {
-                    return paneForGroup(group, textifier).centered();
-                }
-                case GotoLoop -> {
-                    return paneForGroup(group, textifier).centered();
-                }
-                case End -> {
-                    return paneForGroup(group, textifier).centered();
-                }
+                var right = buildGroup(groups, i, textifier, alreadyBuilt, centered);
+
+                group.add(new DoubleBranch(left, right).centered(centered));
+                yield group;
             }
-        }
-        return null;
+            case IfLoop -> throw new UnsupportedOperationException();
+            case Switch -> throw new UnsupportedOperationException();
+            case Goto -> paneForGroup(nodeGroup, textifier).centered(centered);
+            case GotoLoop -> paneForGroup(nodeGroup, textifier).centered(centered);
+            case End -> paneForGroup(nodeGroup, textifier).centered(centered);
+
+        };
+        alreadyBuilt[index] = new AlreadyBuiltEntry(element, i[0] - index);
+        return element;
+
     }
+
+    private static @NotNull Group newVerticalGroup() {
+        Group group = new Group(LayoutPlacement.Vertical);
+        group.containerLayout.childGap = 10;
+        return group;
+    }
+
+    record AlreadyBuiltEntry(Element element, int indexOffset) {}
 }

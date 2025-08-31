@@ -11,6 +11,7 @@ import org.objectweb.asm.util.TraceMethodVisitor;
 import java.awt.font.FontRenderContext;
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -32,10 +33,16 @@ public class Utils {
     }
 
     public static @Nullable List<LabelNode> getSwitchLabels(AbstractInsnNode node) {
-        if (node instanceof LookupSwitchInsnNode lookupSwitch)
-            return lookupSwitch.labels;
-        if (node instanceof TableSwitchInsnNode tableSwitch)
-            return tableSwitch.labels;
+        if (node instanceof LookupSwitchInsnNode lookupSwitch) {
+            var nodes = new ArrayList<>(lookupSwitch.labels);
+            nodes.add(lookupSwitch.dflt);
+            return nodes;
+        }
+        if (node instanceof TableSwitchInsnNode tableSwitch) {
+            var nodes = new ArrayList<>(tableSwitch.labels);
+            nodes.add(tableSwitch.dflt);
+            return nodes;
+        }
 //        if (node instanceof FrameNode frameNode) return frameNode.;
         return null;
     }

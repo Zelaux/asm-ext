@@ -2,14 +2,14 @@ package asmext.tools.graph.ui.opcode;
 
 import asmext.tools.graph.ui.UIContext;
 import asmext.tools.graph.ui.elem.Group;
-import asmext.tools.graph.ui.layout.LayoutDirection;
+import asmext.tools.graph.ui.layout.LayoutPlacement;
 
 import java.awt.*;
 
 public class OpcodePane extends Group {
 
     public OpcodePane(int x,int y) {
-        super(x, y, 0,0, LayoutDirection.Vertical);
+        super(x, y, 0,0, LayoutPlacement.Vertical);
     }
 
     @Override

@@ -65,7 +65,7 @@ public class OpcodeEntry extends Element {
         return this;
     }
 
-    public BoundsRect layout(UIContext context) {
+    public void layout(UIContext context) {
         text = Utils.toString(insnNode, textifier);
         text = text.split("\n")[0];
         super.layout(context);
@@ -77,7 +77,7 @@ public class OpcodeEntry extends Element {
         textHeight = height;
         width += margin * 2;
         height += margin * 2;
-        return BoundsRect.fromRect(width, height);
+        
     }
 
     @Override
