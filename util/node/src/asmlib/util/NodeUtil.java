@@ -51,7 +51,8 @@ public class NodeUtil {
     }
 
     @NotNull
-    public static ClassNode classNode(Class<?> clazz, @AsmVersion int api) throws IOException {
+    @SneakyThrows
+    public static ClassNode classNode(Class<?> clazz, @AsmVersion int api)  {
         ClassReader cr = new ClassReader(clazz.getName());
         return classNode(cr, api);
     }
