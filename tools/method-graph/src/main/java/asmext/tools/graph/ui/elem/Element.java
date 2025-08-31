@@ -152,6 +152,17 @@ public class Element implements ElementLayout {
     public void y(int y) {
         this.y = y;
     }
+
+    public void localToSceneCoordinate(int[] cords) {
+
+        Element elem = this;
+        while (elem != null) {
+            cords[0] += elem.x;
+            cords[1] += elem.y;
+            elem = elem.parent;
+        }
+
+    }
     //endregion
 
 }

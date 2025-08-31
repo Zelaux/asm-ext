@@ -18,15 +18,12 @@ public class DoubleBranch extends ElementWithChild implements ContainerLayout {
     public final ContainerLayoutProperties containerProperties = (ContainerLayoutProperties) layoutProperties;
     public Element left, right;
 
-    public DoubleBranch(int x, int y, Element left, Element right) {
-        super(x, y);
-        this.left = left;
-        this.right = right;
-    }
 
     public DoubleBranch(Element left, Element right) {
         this.left = left;
         this.right = right;
+        left.parent=this;
+        right.parent=this;
     }
 
     @Override

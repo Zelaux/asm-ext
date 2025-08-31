@@ -4,6 +4,7 @@ import asmext.tools.graph.ui.UIContext;
 import asmext.tools.graph.ui.elem.Element;
 import asmext.tools.graph.ui.elem.Group;
 import asmext.tools.graph.ui.layout.LayoutPlacement;
+import asmext.tools.graph.ui.opcode.OpcodeEntry;
 import asmext.tools.graph.ui.opcode.groups.DoubleBranch;
 import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.tree.ClassNode;
@@ -20,7 +21,10 @@ public class LayoutBuilder {
         ControlFlowAnalyzer analyzer = new ControlFlowAnalyzer();
         analyzer.analyze(classNode.name, methodNode);
         var nodes = analyzer.getNodes();
+
         context.maxIndex = nodes.length;
+        context.everyEntry = new OpcodeEntry[nodes.length];
+
         ArrayList<NodeGroup> groups = OldLayoutBuilder.makeGroups(nodes);
         Group group = newVerticalGroup();
         mainGroup.add(group);
@@ -28,7 +32,7 @@ public class LayoutBuilder {
         AlreadyBuiltEntry[] alreadyBuilt = new AlreadyBuiltEntry[groups.size()];
         final boolean centered = context.useHorizontalMode;
         for (int[] i = {0}; i[0] < groups.size(); i[0]++) {
-            var group1 = buildGroup(groups, i, textifier, alreadyBuilt,centered);
+            var group1 = buildGroup(groups, i, textifier, alreadyBuilt, centered);
 
             group.add(group1.centered(centered));
         }

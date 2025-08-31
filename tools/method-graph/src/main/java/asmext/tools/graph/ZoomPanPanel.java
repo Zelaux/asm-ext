@@ -56,7 +56,7 @@ public class ZoomPanPanel extends JPanel {
         });
     }
 
-    private void updateTransform() {
+    public void updateTransform() {
         transform.setToIdentity(); // сброс трансформации
         int w = getWidth();
         int h = getHeight();
@@ -104,6 +104,12 @@ public class ZoomPanPanel extends JPanel {
 
     public AffineTransform getTransform() {
         return new AffineTransform(transform);
+    }
+
+    public void moveCamera(float dx, float dy) {
+        cameraPosition.x += dx;
+        cameraPosition.y += dy;
+        updateTransform();
     }
 
     public interface Painter {

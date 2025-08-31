@@ -63,7 +63,10 @@ public class ClassfileGraphApp extends JFrame {
         add(panel, BorderLayout.CENTER);
 
 
-        context = new UIContext();
+        context = new UIContext(callback -> {
+            callback.accept(panel);
+        });
+
         MousePositionTaker positionTaker = new MousePositionTaker(context, this.panel);
         panel.addMouseListener(positionTaker);
         panel.addMouseMotionListener(positionTaker);

@@ -6,7 +6,6 @@ import asmext.tools.graph.ui.HighlightHandler;
 import asmext.tools.graph.ui.UIContext;
 import asmext.tools.graph.ui.elem.Element;
 import asmext.tools.graph.ui.style.Style;
-import asmext.tools.graph.util.BoundsRect;
 import asmext.tools.graph.util.Utils;
 import lombok.Getter;
 import org.objectweb.asm.Label;
@@ -66,6 +65,7 @@ public class OpcodeEntry extends Element {
     }
 
     public void layout(UIContext context) {
+        context.everyEntry[controlFlowNode.myIndex] = this;
         text = Utils.toString(insnNode, textifier);
         text = text.split("\n")[0];
         super.layout(context);
@@ -77,7 +77,7 @@ public class OpcodeEntry extends Element {
         textHeight = height;
         width += margin * 2;
         height += margin * 2;
-        
+
     }
 
     @Override
@@ -86,13 +86,17 @@ public class OpcodeEntry extends Element {
         hover = x <= context.mouseX && context.mouseX <= x + width && y <= context.mouseY && context.mouseY <= y + height;
         if (hover) {
             context.hovered = this;
+            if (context.justClicked) {
+                context.justClickedOn(this, true);
+            }
         } else if (context.hovered == this) {
             context.hovered = null;
         }
+
         OpcodeEntry hovered = context.hovered;
 
         if (!hover && hovered != null) {
-            highlight = HighlightHandler.shouldHighlight(this, hovered);
+            highlight = HighlightHandler.shouldHighlight(context, this, hovered);
 
         } else highlight = false;
     }

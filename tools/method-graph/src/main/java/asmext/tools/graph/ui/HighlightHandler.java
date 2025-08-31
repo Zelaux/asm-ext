@@ -9,24 +9,24 @@ import org.objectweb.asm.tree.JumpInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
 public class HighlightHandler {
-    public static boolean shouldHighlight(OpcodeEntry self, OpcodeEntry hover) {
+    public static boolean shouldHighlight(UIContext context, OpcodeEntry self, OpcodeEntry hover) {
 //        if (textEquality(self, hover)) return true;
 //        if (labelEquality(self, hover)) return true;
         if (fieldEquality(self, hover)) return true;
         //noinspection RedundantIfStatement
-        if (destinationHighlight(self, hover)) return true;
+        if (destinationHighlight(context, self, hover)) return true;
         return false;
     }
 
-    public static boolean destinationHighlight(OpcodeEntry self, OpcodeEntry hover) {
+    public static boolean destinationHighlight(UIContext context, OpcodeEntry self, OpcodeEntry hover) {
         var selfNode = self.controlFlowNode;
         var hoverNode = hover.controlFlowNode;
-        if (nearGoto(selfNode, hoverNode)) return true;
-        if (nearGoto(hoverNode, selfNode)) return true;
+        if (nearGoto(context, selfNode, hoverNode)) return true;
+        if (nearGoto(context, hoverNode, selfNode)) return true;
         return false;
     }
 
-    public static boolean nearGoto(ControlFlowNode selfNode, ControlFlowNode otherNode) {
+    public static boolean nearGoto(UIContext context, ControlFlowNode selfNode, ControlFlowNode otherNode) {
         int otherIndex = otherNode.myIndex;
         if (selfNode.previous.size() > 1 && selfNode.previous.contains(otherIndex)) return true;
         if (selfNode.gotoNext.contains(otherIndex)) return true;
