@@ -1,7 +1,7 @@
 package asmext.tools.graph.ui.opcode;
 
+import asmext.analytics.controlflow.ControlFlowNode;
 import asmext.tools.graph.Fonts;
-import asmext.tools.graph.layout.ControlFlowNode;
 import asmext.tools.graph.ui.HighlightHandler;
 import asmext.tools.graph.ui.UIContext;
 import asmext.tools.graph.ui.elem.Element;

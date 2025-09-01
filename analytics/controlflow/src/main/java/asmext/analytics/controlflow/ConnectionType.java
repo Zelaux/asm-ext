@@ -1,8 +1,10 @@
-package asmext.tools.graph.layout;
+package asmext.analytics.controlflow;
 
-import static asmext.tools.graph.layout.NodeKindProperties.*;
-
-public enum FullNodeKind {
+import static asmext.analytics.controlflow.NodeKindProperties.*;
+/**
+ * @author Zelaux
+ * */
+public enum ConnectionType {
     Simple(GO_NEXT),
     IfStmt(GO_NEXT | GOTO_LABEL),
     IfLoop(GO_NEXT | GOTO_LABEL | LOOP),
@@ -19,21 +21,21 @@ public enum FullNodeKind {
     MergeEnd(End);
     public static final int MERGE_START = MergePoint.ordinal();
 
-    public final FullNodeKind nonMergeVariant;
+    public final ConnectionType nonMergeVariant;
     @NodeKindProperties
     public final int properties;
 
-    FullNodeKind(FullNodeKind nonMergeVariant, @NodeKindProperties int properties) {
+    ConnectionType(ConnectionType nonMergeVariant, @NodeKindProperties int properties) {
         this.nonMergeVariant = nonMergeVariant;
         this.properties = properties;
     }
 
-    FullNodeKind(@NodeKindProperties int properties) {
+    ConnectionType(@NodeKindProperties int properties) {
         this(null, properties);
     }
 
 
-    FullNodeKind(FullNodeKind variant) {
+    ConnectionType(ConnectionType variant) {
         this(variant, variant.properties);
     }
 
@@ -41,12 +43,8 @@ public enum FullNodeKind {
         return ordinal() >= MERGE_START;
     }
 
-    public FullNodeKind merged() {
-        if (nonMergeVariant != null) return this;
-        return FullNodeKind.values()[ordinal() + MERGE_START];
-    }
 
-    public NodeKind nonMerged() {
-        return NodeKind.values()[(nonMergeVariant != null ? nonMergeVariant : this).ordinal()];
+    public OutputType outputType() {
+        return OutputType.values()[(nonMergeVariant != null ? nonMergeVariant : this).ordinal()];
     }
 }

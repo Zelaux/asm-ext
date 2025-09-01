@@ -1,6 +1,6 @@
 package asmext.tools.graph.ui;
 
-import asmext.tools.graph.layout.ControlFlowNode;
+import asmext.analytics.controlflow.ControlFlowNode;
 import asmext.tools.graph.ui.opcode.OpcodeEntry;
 import asmext.tools.graph.util.Utils;
 import org.objectweb.asm.Label;

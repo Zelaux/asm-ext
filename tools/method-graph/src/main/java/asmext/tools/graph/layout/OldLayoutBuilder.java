@@ -1,6 +1,9 @@
 package asmext.tools.graph.layout;
 
-import asmext.tools.graph.ui.*;
+import asmext.analytics.controlflow.ControlFlowAnalyzer;
+import asmext.analytics.controlflow.ControlFlowBlock;
+import asmext.analytics.controlflow.ControlFlowNode;
+import asmext.tools.graph.ui.UIContext;
 import asmext.tools.graph.ui.elem.Group;
 import asmext.tools.graph.ui.opcode.OpcodePane;
 import lombok.SneakyThrows;
@@ -18,24 +21,23 @@ public class OldLayoutBuilder {
     @SneakyThrows
     public static void buildLayout(Group mainGroup, ClassNode classNode, UIContext context) {
         MethodNode methodNode = classNode.methods.get(0);
-        buildLayout(mainGroup, classNode, methodNode,context);
+        buildLayout(mainGroup, classNode, methodNode, context);
         mainGroup.layout(context);
     }
 
     public static void buildLayout(Group mainGroup, ClassNode classNode, MethodNode methodNode, UIContext context) throws AnalyzerException {
 
 
-        ControlFlowAnalyzer analyzer = new ControlFlowAnalyzer();
-        analyzer.analyze(classNode.name, methodNode);
-        var nodes = analyzer.getNodes();
-        context.maxIndex=nodes.length;
-        ArrayList<NodeGroup> groups = makeGroups(nodes);
+        var analyzer = new ControlFlowAnalyzer();
+        var nodes = analyzer.analyze(classNode.name, methodNode);
+        context.maxIndex = nodes.length;
+        ArrayList<ControlFlowBlock> groups = analyzer.collectGroups();
 
         int y = 0;
         Textifier textifier = new Textifier();
-        for (NodeGroup group : groups) {
+        for (ControlFlowBlock group : groups) {
             var pane = paneForGroup(group, textifier);
-            pane.y=y;
+            pane.y = y;
 
             pane.layout(context);
 
@@ -49,39 +51,12 @@ public class OldLayoutBuilder {
 //        }
     }
 
-     static @NotNull OpcodePane paneForGroup(NodeGroup group, Textifier textifier) {
+    static @NotNull OpcodePane paneForGroup(ControlFlowBlock group, Textifier textifier) {
         var pane = new OpcodePane(0, 0);
         for (ControlFlowNode insnNode : group.nodes) {
             pane.add(opcodeEntry(insnNode, textifier));
         }
         return pane;
-    }
-
-    static @NotNull ArrayList<NodeGroup> makeGroups(ControlFlowNode[] nodes) {
-        ArrayList<NodeGroup> groups = new ArrayList<>();
-        {
-            int prevStart = 0;
-            for (int i = 0; i < nodes.length; i++) {
-                ControlFlowNode node = nodes[i];
-                FullNodeKind kind = node.kind();
-                if (kind == FullNodeKind.Simple) continue;
-                int endIndex = !kind.isMerge() ? i + 1 : i;
-
-                ControlFlowNode[] groupNodes = new ControlFlowNode[endIndex - prevStart];
-                for (int j = prevStart, groupI = 0; j < endIndex; j++, groupI++) {
-                    groupNodes[groupI] = nodes[j];
-                }
-                groups.add(new NodeGroup(
-                        nodes[endIndex - 1].simpleNext,
-                        groupNodes,
-                        nodes[endIndex - 1].gotoNext.copy(),
-                        nodes[prevStart].previous.copy()
-                ));
-                prevStart=endIndex;
-                i = endIndex;
-            }
-        }
-        return groups;
     }
 
 }

@@ -21,5 +21,6 @@ jar {
 }
 dependencies {
     implementation(project(":util:node"))
+    implementation(project(":analytics:controlflow"))
     implementation("io.github.jacksonbrienen:jwfd:0.9.0")
 }

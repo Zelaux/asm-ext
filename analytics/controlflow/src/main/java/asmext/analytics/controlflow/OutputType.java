@@ -1,11 +1,13 @@
-package asmext.tools.graph.layout;
+package asmext.analytics.controlflow;
 
-import asmext.tools.graph.util.IntSet;
 import org.jetbrains.annotations.NotNull;
 
-import static asmext.tools.graph.layout.NodeKindProperties.*;
+import static asmext.analytics.controlflow.NodeKindProperties.*;
 
-public enum NodeKind {
+/**
+ * @author Zelaux
+ */
+public enum OutputType {
     Simple(GO_NEXT),
     IfStmt(GO_NEXT | GOTO_LABEL),
     IfLoop(GO_NEXT | GOTO_LABEL | LOOP),
@@ -16,12 +18,13 @@ public enum NodeKind {
 
     @NodeKindProperties
     public final int properties;
+    public final int id = ordinal();
 
-    NodeKind(@NodeKindProperties int properties) {
+    OutputType(@NodeKindProperties int properties) {
         this.properties = properties;
     }
 
-    public static @NotNull NodeKind getNodeKind(boolean hasNext, IntSet gotoNext1, int myIndex1) {
+    public static @NotNull OutputType getNodeKind(boolean hasNext, InsnIdxSet gotoNext1, int myIndex1) {
         if (!hasNext && gotoNext1.isEmpty()) return End;
         if (hasNext && gotoNext1.isEmpty()) return Simple;
         if (hasNext && gotoNext1.isOne())
@@ -35,11 +38,8 @@ public enum NodeKind {
     }
 
 
-    public FullNodeKind merged() {
-        return FullNodeKind.values()[ordinal() + FullNodeKind.MERGE_START];
+    public ConnectionType connectionType(boolean merged) {
+        return ConnectionType.values()[merged ? id + ConnectionType.MERGE_START : id];
     }
 
-    public FullNodeKind fullType() {
-        return FullNodeKind.values()[ordinal()];
-    }
 }

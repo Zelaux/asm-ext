@@ -1,5 +1,7 @@
 package asmext.tools.graph.layout;
 
+import asmext.analytics.controlflow.ControlFlowAnalyzer;
+import asmext.analytics.controlflow.ControlFlowBlock;
 import asmext.tools.graph.ui.UIContext;
 import asmext.tools.graph.ui.elem.Element;
 import asmext.tools.graph.ui.elem.Group;
@@ -18,14 +20,13 @@ import static asmext.tools.graph.layout.OldLayoutBuilder.paneForGroup;
 
 public class LayoutBuilder {
     public static void buildLayout(Group mainGroup, ClassNode classNode, MethodNode methodNode, UIContext context) throws AnalyzerException {
-        ControlFlowAnalyzer analyzer = new ControlFlowAnalyzer();
-        analyzer.analyze(classNode.name, methodNode);
-        var nodes = analyzer.getNodes();
+        var analyzer = new ControlFlowAnalyzer();
+        var nodes = analyzer.analyze(classNode.name, methodNode);
 
         context.maxIndex = nodes.length;
         context.everyEntry = new OpcodeEntry[nodes.length];
 
-        ArrayList<NodeGroup> groups = OldLayoutBuilder.makeGroups(nodes);
+        ArrayList<ControlFlowBlock> groups = analyzer.collectGroups();
         Group group = newVerticalGroup();
         mainGroup.add(group);
         Textifier textifier = new Textifier();
@@ -42,13 +43,13 @@ public class LayoutBuilder {
 
     }
 
-    private static Element buildGroup(ArrayList<NodeGroup> groups, int[] i, Textifier textifier, AlreadyBuiltEntry[] alreadyBuilt, boolean centered) {
+    private static Element buildGroup(ArrayList<ControlFlowBlock> groups, int[] i, Textifier textifier, AlreadyBuiltEntry[] alreadyBuilt, boolean centered) {
 //        Group out = new Group(LayoutPlacement.Vertical);
 //        out.containerLayout.childGap = 10;
         int index = i[0];
         if (index >= groups.size()) return null;
-        NodeGroup nodeGroup = groups.get(index);
-        Element element = switch (nodeGroup.kind.nonMerged()) {
+        ControlFlowBlock nodeGroup = groups.get(index);
+        Element element = switch (nodeGroup.kind.outputType()) {
             case Simple -> paneForGroup(nodeGroup, textifier).centered(centered);
             case IfStmt -> {
                 i[0]++;

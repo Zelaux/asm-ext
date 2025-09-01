@@ -1,7 +1,9 @@
-package asmext.tools.graph.layout;
+package asmext.analytics.controlflow;
 
 import org.intellij.lang.annotations.MagicConstant;
-
+/**
+ * @author Zelaux
+ * */
 @MagicConstant(flagsFromClass = NodeKindProperties.class)
 public @interface NodeKindProperties {
 

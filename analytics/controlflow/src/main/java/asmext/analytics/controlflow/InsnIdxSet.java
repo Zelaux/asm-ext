@@ -1,23 +1,25 @@
-package asmext.tools.graph.util;
+package asmext.analytics.controlflow;
 
 import org.jetbrains.annotations.Debug;
 
 import java.util.Arrays;
-
-@Debug.Renderer(text = "\"IntSet[\"+size+\"]\"",childrenArray = "toArray()",hasChildren = "true")
-public class IntSet {
+/**
+ * @author Zelaux
+ * */
+@Debug.Renderer(text = "\"InsnIdxSet[\"+size+\"]\"",childrenArray = "toArray()",hasChildren = "true")
+public class InsnIdxSet {
     private int[] table;
     private boolean[] used;
     private int capacity;
     private int size;
 
-    public IntSet(int capacity) {
+    public InsnIdxSet(int capacity) {
         this.capacity = capacity;
         table = new int[capacity];
         used = new boolean[capacity];
     }
 
-    public IntSet(IntSet other) {
+    public InsnIdxSet(InsnIdxSet other) {
         this.capacity = other.capacity;
         this.size = other.size;
         this.table = Arrays.copyOf(other.table, other.table.length);
@@ -34,8 +36,8 @@ public class IntSet {
         return ints;
     }
 
-    public IntSet copy() {
-        return new IntSet(this);
+    public InsnIdxSet copy() {
+        return new InsnIdxSet(this);
     }
 
     private int hash(int key) {
