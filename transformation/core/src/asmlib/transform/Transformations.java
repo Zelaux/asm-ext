@@ -1,14 +1,17 @@
 package asmlib.transform;
 
 import asmlib.dev.annotations.EntryPoint;
-import asmlib.transform.file.*;
+import asmlib.transform.file.FileEntry;
+import asmlib.transform.file.FileExtension;
+import asmlib.transform.file.FileTree;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.LineNumberNode;
 import org.objectweb.asm.tree.MethodNode;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 
 public class Transformations {
 
@@ -40,6 +43,12 @@ public class Transformations {
     }
 
 
+    public static void showError(StackTraceElement element, String text) {
+        Exception exception = new Exception(text);
+        exception.setStackTrace(new StackTraceElement[]{element});
+        exception.printStackTrace();
+    }
+
     public static void showError(ClassNode classNode, MethodNode method, String text) {
         /*
         * ROOT_PATH\asmlib\transform\Transformations.java:46: error: <identifier> expected
@@ -47,17 +56,18 @@ public class Transformations {
                                ^
         * */
         Exception exception = new Exception(text);
+        String name = classNode.name;
         for (AbstractInsnNode instruction : method.instructions) {
             if (instruction instanceof LineNumberNode lineNumberNode) {
                 exception.setStackTrace(new StackTraceElement[]{
-                    new StackTraceElement(classNode.name,method.name,classNode.sourceFile,lineNumberNode.line)
+                        new StackTraceElement(name, method.name, classNode.sourceFile, lineNumberNode.line)
                 });
                 exception.printStackTrace();
                 return;
             }
         }
         exception.setStackTrace(new StackTraceElement[]{
-            new StackTraceElement(classNode.name,method.name,classNode.sourceFile,-1)
+                new StackTraceElement(name, method.name, classNode.sourceFile, -1)
         });
         exception.printStackTrace();
     }

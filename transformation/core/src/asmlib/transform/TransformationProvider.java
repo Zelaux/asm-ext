@@ -2,6 +2,7 @@ package asmlib.transform;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.objectweb.asm.Type;
 
 public interface TransformationProvider extends Comparable<TransformationProvider> {
     @Override
@@ -16,6 +17,7 @@ public interface TransformationProvider extends Comparable<TransformationProvide
     boolean shouldAnalyze(String className);
 
     /**
+     * @param className See {@link Type#getInternalName()}
      * @return null if do not need to write
      */
     @Nullable
