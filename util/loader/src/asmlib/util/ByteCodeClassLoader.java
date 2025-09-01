@@ -27,7 +27,7 @@ public class ByteCodeClassLoader extends ClassLoader{
         {
             byte[][] newByteCodes = new byte[byteCodes.length + bytes.length][];
             System.arraycopy(byteCodes, 0, newByteCodes, 0, prefSize);
-            System.arraycopy(bytes, 0, newByteCodes, bytes.length, bytes.length);
+            System.arraycopy(bytes, 0, newByteCodes, prefSize, bytes.length);
             this.byteCodes = newByteCodes;
         }
         if(classNames == null) return;
