@@ -1,0 +1,7 @@
+
+dependencies {
+    implementation(project(":analytics:controlflow"))
+    implementation(project(":analytics:plugable-analyzer"))
+    testImplementation(project(":util:classfile-metadata"))
+    testImplementation(project(":util:node"))
+}

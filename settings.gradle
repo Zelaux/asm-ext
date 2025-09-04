@@ -10,6 +10,7 @@ include "analytics:object-creation"
 include "analytics:dataflow-analyzer"
 include "analytics:plugable-analyzer"
 include "analytics:controlflow"
+include "analytics:sequence"
 
 include("postprocessors:plugin"+"")
 include("postprocessors:dynamic-dispatch1")
