@@ -8,6 +8,7 @@ include "transformation:core"
 include "analytics:method-return"
 include "analytics:object-creation"
 include "analytics:dataflow-analyzer"
+include "analytics:plugable-analyzer"
 include "analytics:controlflow"
 
 include("postprocessors:plugin"+"")
