@@ -1,6 +1,6 @@
 //file:noinspection GroovyAssignabilityCheck
 def localRoot = project
-Project.metaClass.easyPath= {
+Project.metaClass.easyPath = {
     //noinspection GroovyAssignabilityCheck
     sourceSets.main.java.srcDirs = ["src/", "$buildDir/generated/sources/annotationProcessor/java/main", "generated/"]
     //noinspection GroovyAssignabilityCheck
@@ -61,18 +61,32 @@ subprojects {
             ]
         }
         apply plugin: "java-library"
-        ext.easyPath={project.easyPath()}
+        ext.easyPath = { project.easyPath() }
         if (!new File(project.projectDir, "build.gradle").exists()) {
             project.easyPath()
         }
         dependencies {
+            ext.asmUtils = { implementation "org.ow2.asm:asm-util:$asmVersion" }
+            ext.asmTree = { implementation "org.ow2.asm:asm-tree:$asmVersion" }
+            ext.asmAnalysis = { implementation "org.ow2.asm:asm-analysis:$asmVersion" }
+            ext.testAsmUtils = { testImplementation "org.ow2.asm:asm-util:$asmVersion" }
+            ext.testAsmTree = { testImplementation "org.ow2.asm:asm-tree:$asmVersion" }
+            ext.testAsmAnalysis = { testImplementation "org.ow2.asm:asm-analysis:$asmVersion" }
+        }
+        ext {
+            foox = { -> "org.ow2.asm:asm:$asmVersion" }
+        }
+        dependencies {
+            testAsmUtils()
             testImplementation platform("org.junit:junit-bom:$junitVersion")
             testImplementation 'org.junit.jupiter:junit-jupiter'
 
-
-            implementation "org.ow2.asm:asm-util:$asmVersion"
-            implementation "org.ow2.asm:asm-tree:$asmVersion"
-            implementation "org.ow2.asm:asm-analysis:$asmVersion"
+            implementation "org.ow2.asm:asm:$asmVersion"
+//              implementation "org.ow2.asm:asm-tree:$asmVersion"
+//            implementation "org.ow2.asm:asm-analysis:$asmVersion"
+//            ext.asmCommons={
+//            }
+            testImplementation "org.ow2.asm:asm-commons:$asmVersion"
 
             if (project != devAnnotations) compileOnly devAnnotations
             compileOnly "org.jetbrains:annotations:$jetbrainsAnnoVersion"

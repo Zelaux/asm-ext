@@ -6,5 +6,6 @@ dependencies{
     implementation(project(":analytics:plugable-analyzer"))
 
     testImplementation(project(":util:loader"))
+    testAsmUtils()
 
 }

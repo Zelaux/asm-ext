@@ -1,0 +1,6 @@
+easyPath()
+
+dependencies{
+    asmUtils()
+    asmTree()
+}
