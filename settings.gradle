@@ -23,6 +23,7 @@ include "util:post-visitor"
 include "util:node"
 include "util:classfile-metadata"
 include "util:dynamic-dispatch"
+include "util:insn-print"
 
 include "tools:method-graph"
 
