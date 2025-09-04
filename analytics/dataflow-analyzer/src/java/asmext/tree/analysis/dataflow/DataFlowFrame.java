@@ -1,7 +1,11 @@
 package asmext.tree.analysis.dataflow;
 
+import asmext.analytics.AnalyzerPlugin;
+import asmext.analytics.PlugableAnalyzer;
+import asmext.analytics.PlugableAnalyzerFrame;
+import asmext.analytics.PluginUsage;
 import asmext.tree.analysis.dataflow.interpreter.DataFlowInterpreter;
-import asmext.tree.analysis.dataflow.interpreter.handlers.CustomOpcodeHandler;
+
 import asmext.tree.analysis.dataflow.interpreter.handlers.DupOpcodeHandler;
 import asmext.tree.analysis.dataflow.interpreter.handlers.PopOpcodeHandler;
 import asmext.tree.analysis.dataflow.interpreter.handlers.SwapOpcodeHandler;
@@ -9,6 +13,7 @@ import asmext.tree.analysis.dataflow.value.DataFlowValue;
 import lombok.Getter;
 import lombok.Lombok;
 import lombok.SneakyThrows;
+import main.java.asmext.InsnPrint;
 import org.intellij.lang.annotations.MagicConstant;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -17,9 +22,6 @@ import org.objectweb.asm.tree.analysis.AnalyzerException;
 import org.objectweb.asm.tree.analysis.Frame;
 import org.objectweb.asm.tree.analysis.Interpreter;
 import org.objectweb.asm.tree.analysis.Value;
-import org.objectweb.asm.util.Printer;
-import org.objectweb.asm.util.Textifier;
-import org.objectweb.asm.util.TraceMethodVisitor;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -49,7 +51,7 @@ import java.util.ArrayList;
  * @see PopType
  * @since 2025.06
  */
-public class DataFlowFrame extends Frame<DataFlowValue> implements Opcodes {
+public class DataFlowFrame extends PlugableAnalyzerFrame<DataFlowValue> implements Opcodes {
     private static final InsnList TMP_LIST = new InsnList();
     private final SwapOpcodeHandler.SwapResult<DataFlowValue> tmpSwapResult = new SwapOpcodeHandler.SwapResult<>();
     private final Value[] values;
@@ -74,22 +76,22 @@ public class DataFlowFrame extends Frame<DataFlowValue> implements Opcodes {
         }
     }
 
-    public DataFlowFrame(Frame<? extends DataFlowValue> frame) {
-        super(frame);
+    public DataFlowFrame(Frame<? extends DataFlowValue> frame,DataFlowAnalyzer analyzer) {
+        super(frame,analyzer);
     }
 
-    public DataFlowFrame(int numLocals, int numStack) {
-        super(numLocals, numStack);
+    public DataFlowFrame(int numLocals, int numStack, DataFlowAnalyzer analyzer) {
+        super(numLocals, numStack,analyzer);
         resetState();
     }
 
     public static AnalyzerException illegalUse(String extraInfo, AbstractInsnNode insn) throws AnalyzerException {
-        String opcode = Printer.OPCODES[Math.max(0, insn.getOpcode())];
+        String opcode = InsnPrint.OPCODES[Math.max(0, insn.getOpcode())];
         throw new AnalyzerException(insn, "Illegal use of " + opcode + ": " + extraInfo);
     }
 
     private static AnalyzerException illegalUse(AbstractInsnNode insn) throws AnalyzerException {
-        return illegalUse(insn, Printer.OPCODES[Math.max(0, insn.getOpcode())]);
+        return illegalUse(insn, InsnPrint.OPCODES[Math.max(0, insn.getOpcode())]);
     }
 
     private static AnalyzerException illegalUse(AbstractInsnNode insn, String pop1) throws AnalyzerException {
@@ -131,14 +133,6 @@ public class DataFlowFrame extends Frame<DataFlowValue> implements Opcodes {
         jumpSourceFrames = new ArrayList<>();
     }
 
-    @Override
-    public boolean merge(Frame<? extends DataFlowValue> frame, Interpreter<DataFlowValue> interpreter) throws AnalyzerException {
-        if (interpreter instanceof CustomOpcodeHandler handler) handler.beforeMerge(this, frame, index);
-        boolean result = super.merge(frame, interpreter);
-        if (interpreter instanceof CustomOpcodeHandler handler) handler.afterMerge(this, frame, index, result);
-        return result;
-    }
-
     /**
      * Executes a single instruction on this frame with optional metadata-aware processing for certain opcodes.
      * <p>
@@ -168,9 +162,13 @@ public class DataFlowFrame extends Frame<DataFlowValue> implements Opcodes {
         @MagicConstant(valuesFromClass = Opcodes.class)
         int opcode = insn.getOpcode();
 
+
         index = TMP_LIST.indexOf(insn);
         this.insnNode = insn;
-        if (interpreter instanceof CustomOpcodeHandler handler) handler.beforeOperation(this, insn);
+        var plugins = owner.pluginsFor(PluginUsage.frameExecute);
+        for (AnalyzerPlugin<DataFlowValue> plugin : plugins) {
+            plugin.beforeExecute(owner,this,insn);
+        }
         try {
             switch (opcode) {
                 case POP -> {
@@ -211,16 +209,18 @@ public class DataFlowFrame extends Frame<DataFlowValue> implements Opcodes {
                         push(result.bottom);
                         push(result.top);
                         result.reset();
-                    } else super.execute(insn, interpreter);
+                    } else super.executeWithoutPlugins(insn, interpreter);
                 }
-                default -> super.execute(insn, interpreter);
+                default -> super.executeWithoutPlugins(insn, interpreter);
             }
         } catch (Exception e) {
-            System.out.println("Error In: " + Printer.OPCODES[insn.getOpcode()]);
+            System.out.println("Error In: " +  InsnPrint.OPCODES[insn.getOpcode()]);
             throw Lombok.sneakyThrow(e);
         }
+        for (AnalyzerPlugin<DataFlowValue> plugin : plugins) {
+            plugin.afterExecute(owner,this,insn);
+        }
 
-        if (interpreter instanceof CustomOpcodeHandler handler) handler.afterOperation(this, insn);
     }
 
     @Override
@@ -262,8 +262,6 @@ public class DataFlowFrame extends Frame<DataFlowValue> implements Opcodes {
 
     @Override
     public String toString() {
-        Textifier it = new Textifier();
-        insnNode.accept(new TraceMethodVisitor(it));
-        return ((String) it.text.get(0)).trim() + " " + super.toString();
+        return InsnPrint.toString(insnNode) + " " + super.toString();
     }
 }

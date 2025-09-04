@@ -4,12 +4,11 @@ import asmext.tree.analysis.dataflow.DataFlowAnalyzer;
 import asmext.tree.analysis.dataflow.DataFlowFrame;
 import asmext.tree.analysis.dataflow.DupType;
 import asmext.tree.analysis.dataflow.PopType;
-import asmext.tree.analysis.dataflow.interpreter.handlers.CustomOpcodeHandler;
+
 import asmext.tree.analysis.dataflow.interpreter.handlers.DupOpcodeHandler;
 import asmext.tree.analysis.dataflow.interpreter.handlers.PopOpcodeHandler;
 import asmext.tree.analysis.dataflow.interpreter.handlers.SwapOpcodeHandler;
 import asmext.tree.analysis.dataflow.meta.*;
-import com.github.asmext.tree.analysis.dataflow.meta.*;
 import asmext.tree.analysis.dataflow.value.BaseDataFlowValue;
 import asmext.tree.analysis.dataflow.value.CommonDataFlowValue;
 import asmext.tree.analysis.dataflow.value.DataFlowValue;
@@ -59,8 +58,7 @@ import static org.objectweb.asm.tree.analysis.BasicInterpreter.NULL_TYPE;
 public class DataFlowInterpreter extends Interpreter<DataFlowValue> implements Opcodes,
     DupOpcodeHandler<DataFlowValue>,
     PopOpcodeHandler<DataFlowValue>,
-    SwapOpcodeHandler<DataFlowValue>,
-    CustomOpcodeHandler {
+    SwapOpcodeHandler<DataFlowValue>{
 
     public static final Type JAVA_LANG_STRING = Type.getObjectType("java/lang/String");
     public static final Type JAVA_LANG_CLASS = Type.getObjectType("java/lang/Class");
@@ -68,7 +66,7 @@ public class DataFlowInterpreter extends Interpreter<DataFlowValue> implements O
     public static final Type JAVA_LANG_INVOKE_METHODHANDLE = Type.getObjectType("java/lang/invoke/MethodHandle");
     private static final Type RETURNADDRESS_TYPE = Type.VOID_TYPE;
     private static final Type JAVA_LANG_OBJECT = Type.getObjectType("java/lang/Object");
-    public final ArrayList<OpcodeHandler> customHandlers = new ArrayList<>();
+
 
     /**
      * Constructs a new {@link Interpreter}.
@@ -382,48 +380,5 @@ public class DataFlowInterpreter extends Interpreter<DataFlowValue> implements O
         newBottom.putMeta(SwapMeta.meta, new SwapMeta(newBottom, newTop, false));
 
         return result.set(newBottom, newTop);
-    }
-
-
-    public DataFlowInterpreter customHandler(OpcodeHandler handler) {
-        customHandlers.add(handler);
-        return this;
-    }
-
-    @Override
-    public void beforeOperation(DataFlowFrame frame, AbstractInsnNode insn) {
-        if(customHandlers.isEmpty()) return;
-        for(OpcodeHandler customHandler : customHandlers) {
-            customHandler.beforeOperation(this, frame, insn);
-        }
-    }
-
-    @Override
-    public void afterOperation(DataFlowFrame frame, AbstractInsnNode insn) {
-        if(customHandlers.isEmpty()) return;
-
-        for(OpcodeHandler customHandler : customHandlers) {
-            customHandler.afterOperation(this, frame, insn);
-        }
-    }
-
-    @Override
-    public void beforeMerge(DataFlowFrame sourceFrame, Frame<? extends DataFlowValue> frame, int index) {
-
-        if(customHandlers.isEmpty()) return;
-
-        for(OpcodeHandler customHandler : customHandlers) {
-            customHandler.beforeMerge(this,sourceFrame, (DataFlowFrame)frame, index);
-        }
-    }
-
-    @Override
-    public void afterMerge(DataFlowFrame sourceFrame, Frame<? extends DataFlowValue> frame, int index, boolean changed) {
-
-        if(customHandlers.isEmpty()) return;
-
-        for(OpcodeHandler customHandler : customHandlers) {
-            customHandler.afterMerge(this,sourceFrame, (DataFlowFrame)frame, index,changed);
-        }
     }
 }

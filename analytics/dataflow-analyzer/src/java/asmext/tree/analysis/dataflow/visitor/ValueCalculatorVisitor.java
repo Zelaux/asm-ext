@@ -1,7 +1,6 @@
 package asmext.tree.analysis.dataflow.visitor;
 
 import asmext.tree.analysis.dataflow.value.*;
-import com.github.asmext.tree.analysis.dataflow.value.*;
 
 public interface ValueCalculatorVisitor<RETURN_TYPE> {
     RETURN_TYPE visit(MergedDataFlowValue value);

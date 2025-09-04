@@ -1,7 +1,10 @@
 package asmext.tree.analysis.dataflow;
 
+import asmext.analytics.AnalyzerPlugin;
+import asmext.analytics.PlugableAnalyzer;
 import asmext.tree.analysis.dataflow.interpreter.DataFlowInterpreter;
 import asmext.tree.analysis.dataflow.value.DataFlowValue;
+import lombok.NonNull;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
@@ -33,7 +36,7 @@ import java.util.Arrays;
  * @see DataFlowInterpreter
  * @see DataFlowFrame
  */
-public class DataFlowAnalyzer extends Analyzer<DataFlowValue> {
+public class DataFlowAnalyzer extends PlugableAnalyzer<DataFlowValue> {
 
     public DataFlowAnalyzer() {
         this(new DataFlowInterpreter());
@@ -62,13 +65,19 @@ public class DataFlowAnalyzer extends Analyzer<DataFlowValue> {
 
 
     @Override
-    protected Frame<DataFlowValue> newFrame(int numLocals, int numStack) {
-        return new DataFlowFrame(numLocals, numStack);
+    protected DataFlowFrame newFrame(int numLocals, int numStack) {
+        return new DataFlowFrame(numLocals, numStack, this);
     }
 
     @Override
-    protected Frame<DataFlowValue> newFrame(Frame<? extends DataFlowValue> frame) {
-        return new DataFlowFrame(frame);
+    public DataFlowAnalyzer plugins(@NonNull AnalyzerPlugin<? super DataFlowValue>... plugins) {
+        super.plugins(plugins);
+        return this;
+    }
+
+    @Override
+    protected DataFlowFrame newFrame(Frame<? extends DataFlowValue> frame) {
+        return new DataFlowFrame(frame,this);
     }
 
 }

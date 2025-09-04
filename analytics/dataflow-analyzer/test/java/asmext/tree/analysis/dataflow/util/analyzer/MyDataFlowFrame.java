@@ -1,5 +1,6 @@
 package asmext.tree.analysis.dataflow.util.analyzer;
 
+import asmext.tree.analysis.dataflow.DataFlowAnalyzer;
 import asmext.tree.analysis.dataflow.DataFlowFrame;
 import asmext.tree.analysis.dataflow.value.DataFlowValue;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
@@ -8,13 +9,13 @@ import org.objectweb.asm.tree.analysis.Interpreter;
 
 public class MyDataFlowFrame extends DataFlowFrame {
     final Runnable mergeActor;
-    public MyDataFlowFrame(Frame<? extends DataFlowValue> frame, Runnable mergeActor) {
-        super(frame);
+    public MyDataFlowFrame(Frame<? extends DataFlowValue> frame, Runnable mergeActor, DataFlowAnalyzer analyzer) {
+        super(frame,analyzer);
         this.mergeActor = mergeActor;
     }
 
-    public MyDataFlowFrame(int numLocals, int numStack, Runnable mergeActor) {
-        super(numLocals, numStack);
+    public MyDataFlowFrame(int numLocals, int numStack, Runnable mergeActor, DataFlowAnalyzer analyzer) {
+        super(numLocals, numStack, analyzer);
         this.mergeActor = mergeActor;
     }
 

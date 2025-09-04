@@ -1,10 +1,10 @@
 package asmext.tree.analysis.dataflow.util.analyzer;
 
-import asmlib.util.ByteCodeClassLoader;
-import asmext.tree.analysis.dataflow.util.analyzer.bytecode.BytecodeProvider;
 import asmext.tree.analysis.dataflow.DataFlowAnalyzer;
+import asmext.tree.analysis.dataflow.DataFlowFrame;
+import asmext.tree.analysis.dataflow.util.analyzer.bytecode.BytecodeProvider;
 import asmext.tree.analysis.dataflow.value.DataFlowValue;
-
+import asmlib.util.ByteCodeClassLoader;
 import org.objectweb.asm.tree.analysis.Frame;
 
 import java.lang.reflect.InvocationTargetException;
@@ -12,7 +12,7 @@ import java.lang.reflect.InvocationTargetException;
 public abstract class AbstractHistoryAnalyzerTest {
 
 
-protected static final RuntimeException RETURN_EXCEPTION = new RuntimeException();
+    protected static final RuntimeException RETURN_EXCEPTION = new RuntimeException();
     static int[] exitValue;
 
     @SuppressWarnings("unused")
@@ -24,14 +24,14 @@ protected static final RuntimeException RETURN_EXCEPTION = new RuntimeException(
     public static DataFlowAnalyzer makeAnalyzer(Runnable mergeActor, long[] mergeTime) {
         return new DataFlowAnalyzer() {
             @Override
-            protected Frame<DataFlowValue> newFrame(int numLocals, int numStack) {
-                mergeTime[0]=System.nanoTime();
-                return new MyDataFlowFrame(numLocals, numStack, mergeActor);
+            protected DataFlowFrame newFrame(int numLocals, int numStack) {
+                mergeTime[0] = System.nanoTime();
+                return new MyDataFlowFrame(numLocals, numStack, mergeActor, this);
             }
 
             @Override
-            protected Frame<DataFlowValue> newFrame(Frame<? extends DataFlowValue> frame) {
-                return new MyDataFlowFrame(frame, mergeActor);
+            protected DataFlowFrame newFrame(Frame<? extends DataFlowValue> frame) {
+                return new MyDataFlowFrame(frame, mergeActor, this);
             }
         };
     }

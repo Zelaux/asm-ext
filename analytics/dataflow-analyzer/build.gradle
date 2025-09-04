@@ -10,12 +10,14 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter'
 
 //    api(aproj("util:loader"))
-    testImplementation(aproj("util:loader"))
+    api(project(":util:insn-print"))
+    api(project(":analytics:plugable-analyzer"))
+    testImplementation(project(":util:loader"))
 
 
-    implementation "org.ow2.asm:asm-util:$asmVersion"
-    implementation "org.ow2.asm:asm-tree:$asmVersion"
-    implementation "org.ow2.asm:asm-analysis:$asmVersion"
+//    implementation "org.ow2.asm:asm-util:$asmVersion"
+//    implementation "org.ow2.asm:asm-tree:$asmVersion"
+//    implementation "org.ow2.asm:asm-analysis:$asmVersion"
 
     compileOnly "org.jetbrains:annotations:$jetbrainsAnnoVersion"
 }

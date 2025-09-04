@@ -1,7 +1,6 @@
 package asmext.tree.analysis.dataflow.visitor;
 
 import asmext.tree.analysis.dataflow.value.*;
-import com.github.asmext.tree.analysis.dataflow.value.*;
 
 public interface ValueVisitor {
     void visit(MergedDataFlowValue value);
