@@ -3,6 +3,8 @@
 dependencies{
 
     implementation(project(":util:node"))
+    implementation(project(":analytics:plugable-analyzer"))
+
     testImplementation(project(":util:loader"))
 
 }

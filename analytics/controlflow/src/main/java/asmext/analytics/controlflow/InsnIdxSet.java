@@ -1,12 +1,14 @@
 package asmext.analytics.controlflow;
 
 import org.jetbrains.annotations.Debug;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
+
 /**
  * @author Zelaux
- * */
-@Debug.Renderer(text = "\"InsnIdxSet[\"+size+\"]\"",childrenArray = "toArray()",hasChildren = "true")
+ */
+@Debug.Renderer(text = "debugString()", childrenArray = "toArray()", hasChildren = "isAny()")
 public class InsnIdxSet {
     private int[] table;
     private boolean[] used;
@@ -27,10 +29,13 @@ public class InsnIdxSet {
     }
 
     public int[] toArray() {
-        int[] ints = new int[size];
+        return toArray(new int[size]);
+    }
+
+    public int @NotNull [] toArray(int[] ints) {
         IntIterator iterator = iterator();
 
-        for (int i = 0; i < ints.length; i++) {
+        for (int i = 0; i < Math.min(ints.length,size); i++) {
             ints[i] = iterator.next();
         }
         return ints;
@@ -117,6 +122,21 @@ public class InsnIdxSet {
         }
         if (current >= capacity) throw new IllegalStateException("No more elements");
         return table[current];
+    }
+
+    public String debugString() {
+        return "InsnIdxSet[" + size + "]" + toString();
+    }
+
+    @Override
+    public String toString() {
+        if (size == 0) return "[]";
+        String[] items = new String[size];
+        IntIterator iterator = iterator();
+        for (int i = 0; i < items.length; i++) {
+            items[i] = iterator.next() + "";
+        }
+        return "[" + String.join(", ", items) + "]";
     }
 
     // Кастомный итератор по int

@@ -60,4 +60,11 @@ public class ControlFlowBlock {
     public boolean isDead() {
         return first.isDead();
     }
+
+    public int startIdx() {
+        return first.myIndex;
+    }
+    public int endIdx() {
+        return last.myIndex;
+    }
 }
