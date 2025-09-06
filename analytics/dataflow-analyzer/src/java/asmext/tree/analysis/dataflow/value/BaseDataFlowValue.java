@@ -34,7 +34,7 @@ public sealed abstract class BaseDataFlowValue extends DataFlowValue permits Bas
         return new ParameterValue(type, idx);
     }
 
-    public static DataFlowValue typed(@NonNull Type type, AbstractInsnNode producer, DataFlowValue... from) {
+    public static CommonDataFlowValue typed(@NonNull Type type, AbstractInsnNode producer, DataFlowValue... from) {
         if(producer instanceof LineNumberNode)
             throw new IllegalArgumentException("LineNumberNode not allowed as produces");
         return new CommonDataFlowValue(type, producer, from, false);
@@ -54,12 +54,16 @@ public sealed abstract class BaseDataFlowValue extends DataFlowValue permits Bas
 
 
     public CommonDataFlowValue copied(AbstractInsnNode insn) {
-        return new CommonDataFlowValue(type, insn, new DataFlowValue[]{this}, true);
+        return addNext(new CommonDataFlowValue(type, insn, new DataFlowValue[]{this}, true));
+    }
+
+    public  String flatString(){
+        return toString();
     }
 
     @Override
-    public DataFlowValue merge(BaseDataFlowValue other, MergeContext mergeContext) {
-        return MergedDataFlowValue.make(this, other);
+    public DataFlowValue merge(BaseDataFlowValue other, MergeContext mergeContext, int labelIndex) {
+        return MergedDataFlowValue.make(this, other,labelIndex);
     }
 
     public abstract boolean isSameSource(BaseDataFlowValue newValue);
@@ -89,6 +93,7 @@ public sealed abstract class BaseDataFlowValue extends DataFlowValue permits Bas
         public @Nullable DataFlowValue deepMerge(DataFlowValue newValue, MergeContext mergeContext) {
             return equals(newValue) ? newValue : null;
         }
+
         //region visitors
         @Override
         public void accept(ValueVisitor visitor) {

@@ -35,7 +35,7 @@ public class NotADataFlowValue extends CommonDataFlowValue {
     }
 
     @Override
-    public DataFlowValue merge(BaseDataFlowValue other, MergeContext mergeContext) {
+    public DataFlowValue merge(BaseDataFlowValue other, MergeContext mergeContext, int labelIndex) {
         return other;
     }
 

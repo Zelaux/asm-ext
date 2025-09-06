@@ -22,7 +22,13 @@ public class MergeContext {
     private MergeMarker<?> globalMarker;
     private Object matchableMarker;
     private final Map<Object, ?> visitedThings = new HashMap<>();
-
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public <P> P getVisited(MergeMarker<P> marker){
+        if (globalMarker!=null && globalMarker.match((MergeMarker)marker)) {
+            return (P) matchableMarker;
+        }
+        return (P) visitedThings.get(marker);
+    }
     @SneakyThrows
     public <P, T> T visited(MergeMarker<P> marker, P value, Action<P, T> action) {
 

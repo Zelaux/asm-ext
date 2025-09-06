@@ -1,11 +1,9 @@
 package asmext.tree.analysis.dataflow;
 
 import asmext.analytics.AnalyzerPlugin;
-import asmext.analytics.PlugableAnalyzer;
 import asmext.analytics.PlugableAnalyzerFrame;
 import asmext.analytics.PluginUsage;
 import asmext.tree.analysis.dataflow.interpreter.DataFlowInterpreter;
-
 import asmext.tree.analysis.dataflow.interpreter.handlers.DupOpcodeHandler;
 import asmext.tree.analysis.dataflow.interpreter.handlers.PopOpcodeHandler;
 import asmext.tree.analysis.dataflow.interpreter.handlers.SwapOpcodeHandler;
@@ -25,6 +23,7 @@ import org.objectweb.asm.tree.analysis.Value;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * A specialized {@link Frame} used in JVM bytecode data flow analysis.
@@ -55,7 +54,7 @@ public class DataFlowFrame extends PlugableAnalyzerFrame<DataFlowValue> implemen
     private static final InsnList TMP_LIST = new InsnList();
     private final SwapOpcodeHandler.SwapResult<DataFlowValue> tmpSwapResult = new SwapOpcodeHandler.SwapResult<>();
     private final Value[] values;
-    int index;
+
     int sourceIndex;
     @Getter
     DataFlowValue[] justPopped;
@@ -67,21 +66,16 @@ public class DataFlowFrame extends PlugableAnalyzerFrame<DataFlowValue> implemen
     private DataFlowFrame gotoFrame;
 
     {
-        try {
-            Field field = Frame.class.getDeclaredField("values");
-            field.setAccessible(true);
-            values = (Value[]) field.get(this);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw Lombok.sneakyThrow(e);
-        }
+        values = updateValues();
     }
 
-    public DataFlowFrame(Frame<? extends DataFlowValue> frame,DataFlowAnalyzer analyzer) {
-        super(frame,analyzer);
+    public DataFlowFrame(Frame<? extends DataFlowValue> frame, DataFlowAnalyzer analyzer) {
+        super(frame, analyzer);
+        init(frame);
     }
 
     public DataFlowFrame(int numLocals, int numStack, DataFlowAnalyzer analyzer) {
-        super(numLocals, numStack,analyzer);
+        super(numLocals, numStack, analyzer);
         resetState();
     }
 
@@ -98,25 +92,53 @@ public class DataFlowFrame extends PlugableAnalyzerFrame<DataFlowValue> implemen
         throw new AnalyzerException(insn, "Illegal use of " + pop1);
     }
 
+    private Value[] updateValues() {
+        final Value[] values;
+        try {
+            Field field = Frame.class.getDeclaredField("values");
+            field.setAccessible(true);
+            values = (Value[]) field.get(this);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw Lombok.sneakyThrow(e);
+        }
+        return values;
+    }
+    public DataFlowValue[] variablesAndStack(){
+        return Arrays.copyOf(updateValues(),values.length,DataFlowValue[].class);
+    }
     public DataFlowValue valueOnTop() {
         return getStack(getStackSize() - 1);
     }
 
     @Override
+    public void setIndex(int index) {
+        super.setIndex(index);
+        if (index == -1) {
+            insnNode = null;
+        } else {
+            insnNode = ((DataFlowAnalyzer) owner).getMethodNode().instructions.get(index);
+        }
+    }
+
+    @Override
     public Frame<DataFlowValue> init(Frame<? extends DataFlowValue> frame) {
         if (frame instanceof DataFlowFrame frame1) {
-            index = frame1.index;//TODO find way to save index in label frames
+            //calls from constructor
+            if (owner == null) return this;
+            setIndex(frame1.getIndex());//TODO find way to save index in label frames
             sourceIndex = frame1.sourceIndex;//TODO find way to save index in label frames
             justPopped = frame1.justPopped;
             gotoFrame = frame1.gotoFrame;
             jumpSourceFrames = frame1.jumpSourceFrames;
             insnNode = frame1.insnNode;
         } else {
-            index = -1;
+            setIndex(-1);
             resetState();
 
         }
-        return super.init(frame);
+        Frame<DataFlowValue> init = super.init(frame);
+        updateValues();
+        return init;
     }
 
     public void setGotoFrame(DataFlowFrame frame) {
@@ -125,8 +147,8 @@ public class DataFlowFrame extends PlugableAnalyzerFrame<DataFlowValue> implemen
     }
 
     private void resetState() {
-        sourceIndex = index;
-        index = -1;
+        sourceIndex = getIndex();
+        setIndex(-1);
         insnNode = null;
         justPopped = null;
         gotoFrame = null;
@@ -163,11 +185,11 @@ public class DataFlowFrame extends PlugableAnalyzerFrame<DataFlowValue> implemen
         int opcode = insn.getOpcode();
 
 
-        index = TMP_LIST.indexOf(insn);
+        setIndex(TMP_LIST.indexOf(insn));
         this.insnNode = insn;
         var plugins = owner.pluginsFor(PluginUsage.frameExecute);
         for (AnalyzerPlugin<DataFlowValue> plugin : plugins) {
-            plugin.beforeExecute(owner,this,insn);
+            plugin.beforeExecute(owner, this, insn);
         }
         try {
             switch (opcode) {
@@ -214,11 +236,11 @@ public class DataFlowFrame extends PlugableAnalyzerFrame<DataFlowValue> implemen
                 default -> super.executeWithoutPlugins(insn, interpreter);
             }
         } catch (Exception e) {
-            System.out.println("Error In: " +  InsnPrint.OPCODES[insn.getOpcode()]);
+            System.out.println("Error In: " + InsnPrint.OPCODES[insn.getOpcode()]);
             throw Lombok.sneakyThrow(e);
         }
         for (AnalyzerPlugin<DataFlowValue> plugin : plugins) {
-            plugin.afterExecute(owner,this,insn);
+            plugin.afterExecute(owner, this, insn);
         }
 
     }
@@ -262,6 +284,6 @@ public class DataFlowFrame extends PlugableAnalyzerFrame<DataFlowValue> implemen
 
     @Override
     public String toString() {
-        return InsnPrint.toString(insnNode) + " " + super.toString();
+        return "<" + InsnPrint.toString(insnNode) + ">: " + super.toString();
     }
 }

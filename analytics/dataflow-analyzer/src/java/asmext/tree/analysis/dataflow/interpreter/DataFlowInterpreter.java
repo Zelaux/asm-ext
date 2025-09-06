@@ -13,6 +13,7 @@ import asmext.tree.analysis.dataflow.value.BaseDataFlowValue;
 import asmext.tree.analysis.dataflow.value.CommonDataFlowValue;
 import asmext.tree.analysis.dataflow.value.DataFlowValue;
 import asmext.tree.analysis.dataflow.value.MergedDataFlowValue;
+import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ConstantDynamic;
 import org.objectweb.asm.Handle;
@@ -58,8 +59,12 @@ import static org.objectweb.asm.tree.analysis.BasicInterpreter.NULL_TYPE;
 public class DataFlowInterpreter extends Interpreter<DataFlowValue> implements Opcodes,
     DupOpcodeHandler<DataFlowValue>,
     PopOpcodeHandler<DataFlowValue>,
-    SwapOpcodeHandler<DataFlowValue>{
+    SwapOpcodeHandler<DataFlowValue>,
+    InterpreterWithExtra<DataFlowValue>
+{
 
+    @Setter
+    public int[] mergeFrameIndex;
     public static final Type JAVA_LANG_STRING = Type.getObjectType("java/lang/String");
     public static final Type JAVA_LANG_CLASS = Type.getObjectType("java/lang/Class");
     public static final Type JAVA_LANG_INCOKE_METHODTYPE = Type.getObjectType("java/lang/invoke/MethodType");
@@ -327,7 +332,13 @@ public class DataFlowInterpreter extends Interpreter<DataFlowValue> implements O
             case INVOKEDYNAMIC -> Type.getReturnType(((InvokeDynamicInsnNode) insn).desc);
             default -> Type.getReturnType(((MethodInsnNode) insn).desc);
         };
-        return DataFlowValue.typed(type, insn, values.toArray(DataFlowValue[]::new));
+        var typed = DataFlowValue.typed(type, insn, values.toArray(DataFlowValue[]::new));
+        if(insn.getType()==AbstractInsnNode.METHOD_INSN){
+            for (DataFlowValue value : values) {
+                value.addNext(typed);
+            }
+        }
+        return typed;
     }
 
     @Override
@@ -340,7 +351,7 @@ public class DataFlowInterpreter extends Interpreter<DataFlowValue> implements O
     @NotNull
     public DataFlowValue merge(DataFlowValue value1, DataFlowValue value2) {
 
-        DataFlowValue dataFlowValue = DataFlowValue.mergeValuesFromDifferentBranches(value1, value2);
+        DataFlowValue dataFlowValue = DataFlowValue.mergeValuesFromDifferentBranches(value1, value2,mergeFrameIndex[0]);
         return DataFlowValue.nonNullOrNAV(dataFlowValue);
     }
 

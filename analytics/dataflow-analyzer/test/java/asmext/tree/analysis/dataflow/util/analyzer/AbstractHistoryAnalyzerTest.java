@@ -22,7 +22,7 @@ public abstract class AbstractHistoryAnalyzerTest {
     }
 
     public static DataFlowAnalyzer makeAnalyzer(Runnable mergeActor, long[] mergeTime) {
-        return new DataFlowAnalyzer() {
+        return new DataFlowAnalyzer(true) {
             @Override
             protected DataFlowFrame newFrame(int numLocals, int numStack) {
                 mergeTime[0] = System.nanoTime();
