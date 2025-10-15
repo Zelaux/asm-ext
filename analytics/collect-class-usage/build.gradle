@@ -1,0 +1,11 @@
+
+
+dependencies{
+
+    implementation(project(":util:node"))
+    implementation(project(":util:classfile-metadata"))
+
+    testImplementation(project(":util:loader"))
+    testAsmUtils()
+
+}

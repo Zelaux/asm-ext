@@ -6,6 +6,7 @@ include "dev-annotations"
 include "transformation:core"
 
 include "analytics:method-return"
+include "analytics:collect-class-usage"
 include "analytics:object-creation"
 include "analytics:dataflow-analyzer"
 include "analytics:plugable-analyzer"
