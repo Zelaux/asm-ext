@@ -1,7 +1,9 @@
 package asmlib.transform;
 
+import asmlib.transform.context.TransformationContext;
 import asmlib.transform.file.FileEntry;
 import asmlib.transform.file.FileTree;
+import lombok.AllArgsConstructor;
 import lombok.Lombok;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -17,7 +19,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 public class TransformationPipeline {
     TransformationProvider[] transformationProviders;
@@ -34,36 +35,39 @@ public class TransformationPipeline {
         outputOperationClass.delete();
         //noinspection ResultOfMethodCallIgnored
         outputOperationClass.getParentFile().mkdirs();
-        try (FileOutputStream stream = new FileOutputStream(outputOperationClass)) {
+        try(FileOutputStream stream = new FileOutputStream(outputOperationClass)) {
             stream.write(byteArray);
         }
     }
 
-    public boolean round(FileTree root, List<FileEntry> classpath) throws IOException {
-        for (var provider : transformationProviders) {
-            provider.beforeRound();
+    public boolean round(FileTree root, List<FileEntry> classpath, TransformationContext context) throws IOException {
+        for(var provider : transformationProviders) {
+            provider.beforeRound(context);
         }
-        var writers = readState(classpath);
+        var writers = readState(classpath, context);
         var state = writeState(writers);
         ArrayList<TransformationProvider> providers = new ArrayList<>(transformationProviders.length);
-        for (var provider : transformationProviders) {
-            provider.finishRound();
-            if (provider.needNextRound()) {
+        for(var provider : transformationProviders) {
+            provider.finishRound(context);
+            if(provider.needNextRound(context)) {
                 providers.add(provider);
             }
         }
         this.transformationProviders = providers.toArray(TransformationProvider[]::new);
-        boolean hasFiles = state.length>0;
-        for (FileEntry entry : state) {
-            System.out.printf("Class '%s' changed%n", entry.classpathName());
+        boolean hasFiles = state.length > 0;
+        for(ProcessedFileEntry entry : state) {
+            String formatting = entry.type.formatting;
+            if(formatting == null) continue;
+
+            System.out.printf(formatting + "%n", entry.entry.classpathName());
         }
         return hasFiles && this.transformationProviders.length > 0;
     }
 
-    private FileEntry[] writeState(FileWithData[] writers) throws IOException {
+    private ProcessedFileEntry[] writeState(FileWithData[] writers) throws IOException {
         int changedCounter = 0;
-        FileEntry[] changedEntries = new FileEntry[writers.length];
-        for (var writer : writers) {
+        ProcessedFileEntry[] changedEntries = new ProcessedFileEntry[writers.length];
+        for(var writer : writers) {
             var key = writer.file;
             var transformers = writer.data;
             byte[] allBytes = writer.byteCode;
@@ -80,56 +84,78 @@ public class TransformationPipeline {
 
             ClassVisitor visitor = classWriter;
             boolean changed = false;
-            for (var transformer : transformers) {
+            for(var transformer : transformers) {
+                if(transformer == TransformationWriter.CONTINUE_WRITER) {
+                    if(changedCounter == 0) changedEntries[changedCounter++] = new ProcessedFileEntry(key, ProcessedFileEntry.Type.Mock);
+                    continue;
+                }
+                if(transformer == TransformationWriter.DELETE_WRITER) {
+                    changedEntries[changedCounter++] = new ProcessedFileEntry(key, ProcessedFileEntry.Type.Deleted);
+                    key.file.delete();
+                    break;
+                }
                 ClassNode transformed = transformer.transformClass(classNode);
-                if (transformed != null) {
+                if(transformed != null) {
                     changed = true;
                     classNode = transformed;
                 }
                 ClassVisitor writeVisitor = transformer.createWriteVisitor(className, visitor);
-                if (writeVisitor != null) {
+                if(writeVisitor != null) {
                     changed = true;
                     visitor = writeVisitor;
                 }
             }
-            if (changed) {
+            if(changed) {
                 classNode.accept(visitor);
-                changedEntries[changedCounter++] = key;
+                changedEntries[changedCounter++] = new ProcessedFileEntry(key, ProcessedFileEntry.Type.Changed);
                 saveToFile(key.file, classWriter.toByteArray());
             }
         }
-        if (changedCounter == 0) return FileEntry.EMPTY_ARRAY;
-        if (changedCounter < changedEntries.length) return Arrays.copyOf(changedEntries, changedCounter);
+        if(changedCounter == 0) return ProcessedFileEntry.EMPTY_ARRAY;
+        if(changedCounter < changedEntries.length) return Arrays.copyOf(changedEntries, changedCounter);
         return changedEntries;
     }
 
+    record ProcessedFileEntry(FileEntry entry, Type type) {
+        public static final ProcessedFileEntry[] EMPTY_ARRAY = new ProcessedFileEntry[0];
+
+        @AllArgsConstructor
+        enum Type {
+            Changed("changed '%s'"),
+            Created("created '%s'"),
+            Deleted("deleted '%s'"),
+            Mock(null);
+            public final String formatting;
+        }
+    }
+
     @Nullable
-    private FileWithData getTransformationWriters(FileEntry fileEntry) {
+    private FileWithData getTransformationWriters(FileEntry fileEntry, TransformationContext context) {
         String className = fileEntry.classpathName();
         var transformationProviders = Arrays.stream(this.transformationProviders)
-                .filter(prov -> prov.shouldAnalyze(className))
-                .toArray(TransformationProvider[]::new);
+                                            .filter(prov -> prov.shouldAnalyze(className, context))
+                                            .toArray(TransformationProvider[]::new);
 
-        if (transformationProviders.length == 0) return null;
+        if(transformationProviders.length == 0) return null;
         TransformationWriter[] writers = new TransformationWriter[transformationProviders.length];
         byte[] allBytes;
-        try (FileInputStream fileInputStream = new FileInputStream(fileEntry.file)) {
+        try(FileInputStream fileInputStream = new FileInputStream(fileEntry.file)) {
             allBytes = fileInputStream.readAllBytes();
-        } catch (IOException e) {
+        } catch(IOException e) {
             throw Lombok.sneakyThrow(e);
         }
         var byteCodeProvider = new LazyByteCodeProvider(() -> Arrays.copyOf(allBytes, allBytes.length));
         int counter = 0;
-        for (var transformer : transformationProviders) {
+        for(var transformer : transformationProviders) {
             ClassReader reader = new ClassReader(allBytes);
             byteCodeProvider.reset();
-            var writer = transformer.analyze(className, byteCodeProvider);
-            if (writer == null) continue;
+            var writer = transformer.analyze(className, byteCodeProvider, context);
+            if(writer == null) continue;
             writers[counter++] = writer;
 
         }
-        if (counter == 0) return null;
-        if (writers.length > counter) writers = Arrays.copyOf(writers, counter);
+        if(counter == 0) return null;
+        if(writers.length > counter) writers = Arrays.copyOf(writers, counter);
         return new FileWithData(fileEntry, allBytes, writers);
     }
 
@@ -137,10 +163,10 @@ public class TransformationPipeline {
 
     ;
 
-    protected @NotNull FileWithData[] readState(List<FileEntry> classpath) throws IOException {
+    protected FileWithData[] readState(List<FileEntry> classpath, TransformationContext context) throws IOException {
         List<FileWithData> list = new ArrayList<>();
         for(FileEntry fileEntry : classpath) {
-            FileWithData transformationWriters = getTransformationWriters(fileEntry);
+            FileWithData transformationWriters = getTransformationWriters(fileEntry, context);
             if(transformationWriters != null) {
                 list.add(transformationWriters);
             }

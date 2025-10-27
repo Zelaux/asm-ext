@@ -1,24 +1,33 @@
 package asmlib.transform;
 
-import org.jetbrains.annotations.*;
+import asmlib.transform.context.TransformationContext;
 
 @SuppressWarnings("unused")
 public abstract class AbstractClassFileTransformer implements TransformationProvider {
     public int roundLeft;
     public int roundIndex;
 
-    public AbstractClassFileTransformer(int maxRound){
+    /**
+     * {@inheritDoc}
+     */
+    public AbstractClassFileTransformer(int maxRound) {
         this.roundLeft = maxRound;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void finishRound() {
+    public void finishRound(TransformationContext context) {
         roundLeft--;
         roundIndex++;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public boolean needNextRound(){
+    public boolean needNextRound(TransformationContext context) {
         return roundLeft > 0;
     }
 

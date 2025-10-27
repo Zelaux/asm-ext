@@ -1,8 +1,8 @@
 package asmlib.transform;
 
+import asmlib.transform.context.TransformationContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.objectweb.asm.Type;
 
 public interface TransformationProvider extends Comparable<TransformationProvider> {
     @Override
@@ -14,18 +14,23 @@ public interface TransformationProvider extends Comparable<TransformationProvide
         return 0;
     }
 
-    boolean shouldAnalyze(String className);
+    /**
+     * @param className See {@link Class#getCanonicalName()}
+     * @param context
+     */
+    boolean shouldAnalyze(String className, TransformationContext context);
 
     /**
-     * @param className See {@link Type#getInternalName()}
+     * @param className See {@link Class#getCanonicalName()}
+     * @param context
      * @return null if do not need to write
      */
     @Nullable
-    TransformationWriter analyze(String className, LazyByteCodeProvider byteCodeProvider);
+    TransformationWriter analyze(String className, LazyByteCodeProvider byteCodeProvider, TransformationContext context);
 
-    default void finishRound() {}
+    default void finishRound(TransformationContext context) {}
 
-    default void beforeRound() {}
+    default void beforeRound(TransformationContext context) {}
 
-    boolean needNextRound();
+    boolean needNextRound(TransformationContext context);
 }

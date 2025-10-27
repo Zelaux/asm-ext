@@ -6,9 +6,30 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.tree.ClassNode;
 
 public interface TransformationWriter extends Comparable<TransformationWriter> {
+    /**
+     * Used to create multi-loop transformation without creating mockfiles
+     */
+    TransformationWriter CONTINUE_WRITER = mockWriter();
+    TransformationWriter DELETE_WRITER = mockWriter();
+
+    private static @NotNull TransformationWriter mockWriter() {
+        return new TransformationWriter() {
+            @Override
+            public @Nullable ClassNode transformClass(ClassNode classNode) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public @Nullable ClassVisitor createWriteVisitor(String className, ClassVisitor visitor) {
+                throw new UnsupportedOperationException();
+            }
+        };
+    }
+
     static @Nullable TransformationWriter nodeTransformer(NodeTransformer transformer) {
         return transformer;
     }
+
     static @Nullable TransformationWriter writeTransformer(WriteTransformer transformer) {
         return transformer;
     }
@@ -33,14 +54,16 @@ public interface TransformationWriter extends Comparable<TransformationWriter> {
      */
     @Nullable
     ClassVisitor createWriteVisitor(String className, ClassVisitor visitor);
-    interface NodeTransformer extends TransformationWriter{
+
+    interface NodeTransformer extends TransformationWriter {
         @Override
         @Nullable
-        default ClassVisitor createWriteVisitor(String className, ClassVisitor visitor){
+        default ClassVisitor createWriteVisitor(String className, ClassVisitor visitor) {
             return null;
         }
     }
-    interface WriteTransformer extends TransformationWriter{
+
+    interface WriteTransformer extends TransformationWriter {
         @Override
         @Nullable
         default ClassNode transformClass(ClassNode classNode) {

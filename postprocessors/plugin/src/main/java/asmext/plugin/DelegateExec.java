@@ -34,9 +34,9 @@ public abstract class DelegateExec extends DefaultTask implements JavaExecSpec {
     @Internal
     public Property<String> getMainClass() {return getJavaExec().getMainClass();}
 
-
-    @Internal
-    public JavaExecSpec setMain(String main) {return getJavaExec().setMain(main);}
+//TODO removed in new versions
+//    @Internal
+//    public JavaExecSpec setMain(String main) {return getJavaExec().setMain(main);}
 
 
     @Internal

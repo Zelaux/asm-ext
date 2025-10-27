@@ -1,9 +1,11 @@
 package asmlib.transform;
 
 import asmlib.dev.annotations.EntryPoint;
+import asmlib.transform.context.TransformationContext;
 import asmlib.transform.file.FileEntry;
 import asmlib.transform.file.FileExtension;
 import asmlib.transform.file.FileTree;
+import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.LineNumberNode;
@@ -16,16 +18,16 @@ import java.util.ArrayList;
 public class Transformations {
 
     @EntryPoint
-    public static void run(File rootFile, TransformationProvider... providers) throws IOException {
-        System.out.println("Transformation started");
+    public static void run(File rootFile, TransformationContext context, TransformationProvider... providers) throws IOException {
+        System.out.println("Transformation started.");
         FileTree fileTree = new FileTree(rootFile);
         ArrayList<FileEntry> classpath = new ArrayList<>();
         fileTree.visitFiles(it -> {
-            if (FileExtension.Class == it.extensionId) {
+            if(FileExtension.Class == it.extensionId) {
                 classpath.add(it);
             }
         });
-        System.out.println("File tree collected");
+        System.out.println("File tree collected.");
         File outputFolder = new File(rootFile.getParentFile(), "raw");
         //noinspection ResultOfMethodCallIgnored
         outputFolder.delete();
@@ -33,13 +35,14 @@ public class Transformations {
 
 
         TransformationPipeline transformationPipeline = new TransformationPipeline(
-                providers
+            providers
         );
         //noinspection StatementWithEmptyBody
-        while (transformationPipeline.round(fileTree, classpath)) {
-
-        }
-        System.out.println("Done.");
+        int i = 1;
+        do {
+            System.out.printf("Round %d%n", i++);
+        } while(transformationPipeline.round(fileTree, classpath, context));
+        System.out.println("\nDone.");
     }
 
 
@@ -55,20 +58,26 @@ public class Transformations {
                 lineNumberNode.
                                ^
         * */
+        Exception exception = createErrorException(classNode, method, text);
+        exception.printStackTrace();
+    }
+
+    public static @NotNull Exception createErrorException(ClassNode classNode, MethodNode method, String text) {
         Exception exception = new Exception(text);
+        exception.setStackTrace(new StackTraceElement[]{
+            createErrorElement(classNode, method)
+        });
+        return exception;
+    }
+
+    public static StackTraceElement createErrorElement(ClassNode classNode, MethodNode method) {
         String name = classNode.name;
-        for (AbstractInsnNode instruction : method.instructions) {
-            if (instruction instanceof LineNumberNode lineNumberNode) {
-                exception.setStackTrace(new StackTraceElement[]{
-                        new StackTraceElement(name, method.name, classNode.sourceFile, lineNumberNode.line)
-                });
-                exception.printStackTrace();
-                return;
+        for(AbstractInsnNode instruction : method.instructions) {
+            if(instruction instanceof LineNumberNode lineNumberNode) {
+                return new StackTraceElement(name, method.name, classNode.sourceFile, lineNumberNode.line);
+
             }
         }
-        exception.setStackTrace(new StackTraceElement[]{
-                new StackTraceElement(name, method.name, classNode.sourceFile, -1)
-        });
-        exception.printStackTrace();
+        return new StackTraceElement(name, method.name, classNode.sourceFile, -1);
     }
 }
