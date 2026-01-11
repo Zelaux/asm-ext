@@ -1,0 +1,13 @@
+dependencies {
+    asmAnalysis()
+
+    implementation(project(":util:classfile-metadata"))
+    implementation(project(":util:node"))
+    implementation(project(":analytics:dataflow-analyzer"))
+    implementation(project(":analytics:plugable-analyzer"))
+    implementation(project(":analytics:controlflow"))
+    implementation(project(":analytics:sequence"))
+    compileOnly(project(":transformation:core"))
+
+    testImplementation(project(":transformation:core"))
+}
