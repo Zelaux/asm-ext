@@ -1,5 +1,9 @@
 package asmext.postprocessors.inlinefunc;
 
+import asmext.postprocessors.inlinefunc.classes.BooleanTestClass;
+import asmext.postprocessors.inlinefunc.classes.ModificationTestClass;
+import asmext.postprocessors.inlinefunc.classes.SimpleTestClass;
+
 import asmlib.util.NodeUtil;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
@@ -7,50 +11,57 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.util.Textifier;
-import org.objectweb.asm.util.TraceMethodVisitor;
 
 import java.io.File;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 class FunctionInlinerTest {
     static File mainFolder;
 
     @SneakyThrows
     public static void main(String[] args) {
-        mainFolder = new File("gitignore/inlineDot-func");
+        mainFolder = new File("gitignore/inline-func");
+
+        Class<?>[] classes = {
+                SimpleTestClass.class,
+                BooleanTestClass.class,
+                ModificationTestClass.class,
+        };
+        for (var it : classes) testClass(it);
+    }
+
+    @SneakyThrows
+    static void testClass(Class<?> testClass) {
+
+        ClassNode classNode = NodeUtil.classNode(testClass, Opcodes.ASM9);
 
 
-        ClassNode classNode = NodeUtil.classNode(TestClass.class, Opcodes.ASM9);
-        Map<String, MethodNode> methods = classNode.methods.stream().collect(
-                Collectors.toMap(x -> x.name, x -> x));
+        Type ownerType = Type.getType(testClass);
+        var inlineMethods = new HashMap<String, MethodToInline>();
+        var methods = new ArrayList<MethodNode>();
 
-        MethodNode x = methods.get("x"), y = methods.get("y"), dot = methods.get("dot");
-        MethodNode dotx = methods.get("dotx"), doty = methods.get("doty"), dot_i = methods.get("dot_i");
+        for (var method : classNode.methods) {
+            if (NodeUtil.findAnnotation(method.invisibleAnnotations, TestInline.class) != null) {
+                inlineMethods.put(descriptor(ownerType, method), MethodToInline.make(method));
+            } else if (NodeUtil.findAnnotation(method.invisibleAnnotations, TestTarget.class) != null) {
+                methods.add(method);
+            }
+        }
 
-        Type ownerType = Type.getType(TestClass.class);
-
-        var inlineMethods = new HashMap<>(Map.of(
-                descriptor(ownerType, x), MethodToInline.make(x),
-                descriptor(ownerType, y), MethodToInline.make(y),
-                descriptor(ownerType, dotx), MethodToInline.make(dotx),
-                descriptor(ownerType, doty), MethodToInline.make(doty)
-        ));
+        for (var method : methods) {
+            method.instructions = FunctionInliner.inline(FunctionInliner.makeDescriptor(ownerType, method), inlineMethods);
+        }
 //        dot.instructions = FunctionInliner.inline(new FunctionInliner.MethodDescriptor(ownerType, dot), dot.instructions, inlineMethods);
-        dot_i.instructions = FunctionInliner.inline(FunctionInliner.makeDescriptor(ownerType, dot_i), inlineMethods);
+//        dot_i.instructions = FunctionInliner.inline(FunctionInliner.makeDescriptor(ownerType, dot_i), inlineMethods);
 
 
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
         classNode.accept(writer);
 
-        File file = new File(mainFolder, TestClass.class.getSimpleName() + ".class");
+        File file = new File(mainFolder, testClass.getSimpleName() + ".class");
         Files.createDirectories(file.getParentFile().toPath());
         Files.write(
                 file.toPath(),

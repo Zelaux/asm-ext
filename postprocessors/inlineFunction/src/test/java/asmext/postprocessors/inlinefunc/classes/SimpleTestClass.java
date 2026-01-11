@@ -1,21 +1,20 @@
-package asmext.postprocessors.inlinefunc;
+package asmext.postprocessors.inlinefunc.classes;
 
-class TestClass {
+import asmext.postprocessors.inlinefunc.TestInline;
+import asmext.postprocessors.inlinefunc.TestTarget;
+
+public class SimpleTestClass {
     static float[] arr = new float[1 << 8];
 
+    @TestInline
     static float x(int i) {return arr[i << 1];}
 
+    @TestInline
     static float y(int i) {return arr[(i << 1) + 1];}
 
+    @TestTarget
     static float dot(int i, float x, float y) {
         return x(i) * x + y(i) * y;
     }
 
-
-    static float dotx(int i) {return x(i++)*x(i);}
-    static float doty(int i) {return y(i++)*y(i);}
-
-    static float dot_i(int i) {
-        return dotx(i)+doty(i);
-    }
 }

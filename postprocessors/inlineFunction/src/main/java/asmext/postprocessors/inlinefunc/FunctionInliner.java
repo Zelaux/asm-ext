@@ -41,6 +41,7 @@ public class FunctionInliner implements Opcodes {
             var frame = frames[insnIndex];
             {
                 newBody.remove(newBody.getLast());
+                var size = newBody.size();
                 if (debug) {
                     newBody.add(new LdcInsnNode(methodToInline.name));
                     newBody.add(new InsnNode(POP));
@@ -56,7 +57,8 @@ public class FunctionInliner implements Opcodes {
                             var first = local.insns.iterator().next();
                             if (first.getType() == AbstractInsnNode.VAR_INSN) {
                                 var index1 = MOCK_LIST.indexOf(first);
-                                newBody.remove(newBody.get(newBody.size() - insnIndex + index1));
+
+                                newBody.remove(newBody.get(size - insnIndex + index1));
                                 argumentMapper[i] = ((VarInsnNode) first).var;
                                 continue;
                             }

@@ -54,7 +54,7 @@ public final class MethodToInline implements Opcodes {
                 }
                 case AbstractInsnNode.VAR_INSN -> {
                     var varInsn = (VarInsnNode) insnNode;
-                     if(ILOAD<=opcode && opcode<=ALOAD){
+                     if(OpcodeClassifier.isLoad(opcode)){
                          localUsage[varInsn.var].load.add(instructionIndex);
                      }else{
                          localUsage[varInsn.var].store.add(instructionIndex);
