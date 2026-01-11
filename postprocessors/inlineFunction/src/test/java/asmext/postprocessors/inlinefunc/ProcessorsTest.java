@@ -20,9 +20,7 @@ class ProcessorsTest {
 
     public static void main(String[] args) {
 
-        byte[] bytes = getBytes(TestClass.class);
-        ClassNode node = NodeUtil.classNode(bytes, Opcodes.ASM9);
-        System.out.println(node);
+
     }
 
 }

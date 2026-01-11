@@ -1,32 +1,21 @@
 package asmext.postprocessors.inlinefunc;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+class TestClass {
+    static float[] arr = new float[1 << 8];
 
-public class TestClass {
+    static float x(int i) {return arr[i << 1];}
 
+    static float y(int i) {return arr[(i << 1) + 1];}
 
-    static int calc2(int x) {
-        return x * 2;
-    }
-
-    static int calc3(int x) {
-        return x * 3;
+    static float dot(int i, float x, float y) {
+        return x(i) * x + y(i) * y;
     }
 
 
+    static float dotx(int i) {return x(i++)*x(i);}
+    static float doty(int i) {return y(i++)*y(i);}
 
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(ElementType.TYPE_USE)
-    @interface InlineFunction2 {
-
+    static float dot_i(int i) {
+        return dotx(i)+doty(i);
     }
-
-    @FunctionalInterface
-    interface Int2Int {
-        int calc(int x);
-    }
-
 }

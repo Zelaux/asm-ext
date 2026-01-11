@@ -22,9 +22,10 @@ import java.util.stream.Collectors;
 
 class FunctionInlinerTest {
     static File mainFolder;
+
     @SneakyThrows
     public static void main(String[] args) {
-        mainFolder=new File("gitignore/inline-func");
+        mainFolder = new File("gitignore/inlineDot-func");
 
 
         ClassNode classNode = NodeUtil.classNode(TestClass.class, Opcodes.ASM9);
@@ -32,25 +33,18 @@ class FunctionInlinerTest {
                 Collectors.toMap(x -> x.name, x -> x));
 
         MethodNode x = methods.get("x"), y = methods.get("y"), dot = methods.get("dot");
+        MethodNode dotx = methods.get("dotx"), doty = methods.get("doty"), dot_i = methods.get("dot_i");
 
         Type ownerType = Type.getType(TestClass.class);
-        var methodDescriptor = new FunctionInliner.MethodDescriptor(ownerType, dot);
 
-        InsnList inline = FunctionInliner.inline(
-                methodDescriptor, dot.instructions,
-                new HashMap<>(Map.of(
-                        descriptor(ownerType, x), MethodToInline.make(x),
-                        descriptor(ownerType, y), MethodToInline.make(y)
-                ))
-        );
-
-        Textifier printer = new Textifier();
-        inline.accept(new TraceMethodVisitor(printer));
-        StringWriter stringWriter = new StringWriter();
-        printer.print(new PrintWriter(stringWriter));
-        System.out.println(stringWriter);
-
-        dot.instructions=inline;
+        var inlineMethods = new HashMap<>(Map.of(
+                descriptor(ownerType, x), MethodToInline.make(x),
+                descriptor(ownerType, y), MethodToInline.make(y),
+                descriptor(ownerType, dotx), MethodToInline.make(dotx),
+                descriptor(ownerType, doty), MethodToInline.make(doty)
+        ));
+//        dot.instructions = FunctionInliner.inline(new FunctionInliner.MethodDescriptor(ownerType, dot), dot.instructions, inlineMethods);
+        dot_i.instructions = FunctionInliner.inline(FunctionInliner.makeDescriptor(ownerType, dot_i), inlineMethods);
 
 
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
@@ -73,15 +67,4 @@ class FunctionInlinerTest {
 
     }
 
-    static class TestClass {
-        static float[] arr = new float[1 << 8];
-
-        static float x(int i) {return arr[i << 1];}
-
-        static float y(int i) {return arr[(i << 1) + 1];}
-
-        static float dot(int i, float x, float y) {
-            return x(i) * x + y(i) * y;
-        }
-    }
 }
