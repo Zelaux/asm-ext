@@ -1,5 +1,8 @@
 package asmext.analytics;
 
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.Setter;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
@@ -15,14 +18,16 @@ import org.objectweb.asm.tree.analysis.Value;
  */
 public class PlugableAnalyzerFrame<V extends Value> extends Frame<V> {
     public final PlugableAnalyzer<V> owner;
-    public int index = -1;
+    @Setter
+    @Getter
+    private int index = -1;
 
-    public PlugableAnalyzerFrame(int numLocals, int maxStack, PlugableAnalyzer<V> owner) {
+    public PlugableAnalyzerFrame(int numLocals, int maxStack,@NonNull PlugableAnalyzer<V> owner) {
         super(numLocals, maxStack);
         this.owner = owner;
     }
 
-    public PlugableAnalyzerFrame(Frame<? extends V> frame, PlugableAnalyzer<V> owner) {
+    public PlugableAnalyzerFrame(Frame<? extends V> frame,@NonNull PlugableAnalyzer<V> owner) {
         super(frame);
         this.owner = owner;
     }
@@ -66,7 +71,7 @@ public class PlugableAnalyzerFrame<V extends Value> extends Frame<V> {
             //noinspection unchecked
             plugin.beforeMerge(owner, this, (PlugableAnalyzerFrame<V>) frame);
         }
-        boolean changed = super.merge(frame, interpreter);
+        boolean changed = justMerge(frame, interpreter);
         for (AnalyzerPlugin<V> plugin : plugins) {
             //noinspection unchecked
             plugin.afterMerge(owner, this, (PlugableAnalyzerFrame<V>) frame, changed);
@@ -74,7 +79,12 @@ public class PlugableAnalyzerFrame<V extends Value> extends Frame<V> {
         return changed;
     }
 
+    protected boolean justMerge(Frame<? extends V> frame, Interpreter<V> interpreter) throws AnalyzerException {
+        return super.merge(frame, interpreter);
+    }
+
     public V valueOnTop() {
         return getStack(getStackSize() - 1);
     }
+
 }

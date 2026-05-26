@@ -2,6 +2,7 @@ package asmext.analytics;
 
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.analysis.*;
 
@@ -17,7 +18,7 @@ public class PlugableAnalyzer<V extends Value> extends Analyzer<V> {
     public final Interpreter<V> originalInterpreter;
     public final ArrayList<AnalyzerPlugin<V>> allPlugins = new ArrayList<>();
     protected final ArrayList<AnalyzerPlugin<V>>[] sortedPlugins = initPlugins();
-
+protected AbstractInsnNode[] currentInstructions;
     /**
      * Constructs a new {@link Analyzer}.
      *
@@ -41,6 +42,7 @@ public class PlugableAnalyzer<V extends Value> extends Analyzer<V> {
     public Frame<V>[] analyze(String owner, MethodNode method) throws AnalyzerException {
         for (AnalyzerPlugin<V> plugin : pluginsFor(PluginUsage.beforeAnalyze))
             plugin.beforeAnalyze(this, owner, method);
+        currentInstructions=method.instructions.toArray();
         Frame<V>[] analyzedFrames = super.analyze(owner, method);
         for (AnalyzerPlugin<V> plugin : pluginsFor(PluginUsage.afterAnalyze))
             plugin.afterAnalyze(this, owner, method, analyzedFrames);
@@ -85,8 +87,8 @@ public class PlugableAnalyzer<V extends Value> extends Analyzer<V> {
             plugin.newControlFlowEdge(this, insnIndex, successorIndex);
         }
         Frame<V>[] frames = getFrames();
-        castFrame(frames[successorIndex]).index = successorIndex;
-        castFrame(frames[insnIndex]).index = successorIndex;
+        castFrame(frames[successorIndex]).setIndex(successorIndex);
+        castFrame(frames[insnIndex]).setIndex(insnIndex);
         super.newControlFlowEdge(insnIndex, successorIndex);
     }
 
