@@ -5,10 +5,12 @@ include "dev-annotations"
 
 include "transformation:core"
 
+include "transformation:state-method"
+
 include "analytics:method-return"
 include "analytics:collect-class-usage"
 include "analytics:object-creation"
-include "analytics:dataflow-analyzer"
+//include "analytics:dataflow-analyzer"
 include "analytics:plugable-analyzer"
 include "analytics:controlflow"
 include "analytics:sequence"
