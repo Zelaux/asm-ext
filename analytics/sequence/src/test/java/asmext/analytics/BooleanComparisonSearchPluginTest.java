@@ -10,13 +10,13 @@ import org.objectweb.asm.tree.analysis.SourceValue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class BooleanComparisonPluginTest implements Opcodes {
+class BooleanComparisonSearchPluginTest implements Opcodes {
     @Test
     void testFinding() throws Exception {
         var node = NodeUtil.classNode(TargetClass.class, ASM9);
         MethodNode methodNode = node.methods.get(0);
         var controlFlowPlugin = new ControlFlowPlugin();
-        var plugin = new BooleanComparisonPlugin(controlFlowPlugin);
+        var plugin = BooleanComparisonSearchPlugin.sourceValue(controlFlowPlugin);
         plugin.instructions = methodNode.instructions.toArray();
         PlugableAnalyzer<SourceValue> plugin1 = new PlugableAnalyzer<>(new SourceInterpreter())
                 .plugins(plugin)
