@@ -4,6 +4,7 @@ import asmlib.transform.AbstractClassFileTransformer;
 import asmlib.transform.LazyByteCodeProvider;
 import asmlib.transform.TransformationWriter;
 import asmlib.transform.Transformations;
+import asmlib.transform.context.TransformationContext;
 import asmlib.util.ClassFileMetaData;
 import asmlib.util.NodeUtil;
 import asmext.util.dispatch.DefaultVariantKind;
@@ -25,12 +26,12 @@ public class Main extends AbstractClassFileTransformer {
     }
 
     @Override
-    public boolean shouldAnalyze(String className) {
+    public boolean shouldAnalyze(String className, TransformationContext context) {
         return true;
     }
 
     @Override
-    public @Nullable TransformationWriter analyze(String className, LazyByteCodeProvider byteCodeProvider) {
+    public @Nullable TransformationWriter analyze(String className, LazyByteCodeProvider byteCodeProvider, TransformationContext context) {
         var metaData = new ClassFileMetaData(byteCodeProvider.getCloned());
         if(!metaData.usesAnnotation(DispatchHub.class)) return null;
         var classNode = byteCodeProvider.createClassNode();
