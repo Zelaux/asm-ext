@@ -2,11 +2,13 @@ package asmext.tree.analysis.dataflow.value;
 
 import asmext.tree.analysis.dataflow.interpreter.MetaDataKey;
 import asmext.tree.analysis.dataflow.meta.SelfRecursion;
-import asmext.tree.analysis.dataflow.util.ValueEntry;
+import asmext.tree.analysis.dataflow.util.TypeUtil;
+import asmext.tree.analysis.dataflow.util.ValueUtil;
 import asmext.tree.analysis.dataflow.value.merge.MergeContext;
 import asmext.tree.analysis.dataflow.value.merge.StartMarker;
 import asmext.tree.analysis.dataflow.value.merge.meta.LocationEntry;
 import asmext.tree.analysis.dataflow.value.merge.meta.LocationListMeta;
+import asmext.tree.analysis.dataflow.value.ref.ValueRef;
 import asmext.tree.analysis.dataflow.visitor.ValueCalculatorVisitor;
 import asmext.tree.analysis.dataflow.visitor.ValueVisitor;
 import lombok.NonNull;
@@ -16,6 +18,7 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.analysis.Value;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -25,7 +28,7 @@ public sealed abstract class DataFlowValue implements Value
     public static final DataFlowValue[] EMPTY_LIST = new DataFlowValue[0];
 
     //region makers
-    public final HashMap<ValueEntry,EitherMergedOrCommon> nextNodes = new HashMap<>();
+    public final HashMap<ValueRef,ValueRef> nextNodes = new HashMap<>();
     @Nullable
     private Map<MetaDataKey<?>, ?> metaData;
 
@@ -53,12 +56,13 @@ public sealed abstract class DataFlowValue implements Value
     }
 
     @Nullable
-    public static DataFlowValue mergeValuesFromDifferentBranches(@Nullable DataFlowValue oldValue, @Nullable DataFlowValue newValue, int mergeFrameIndex) {
+    public static DataFlowValue mergeValuesFromDifferentBranches(@Nullable DataFlowValue oldValue, @Nullable DataFlowValue newValue, int mergeFrameIndex, boolean[] changed) {
 
-        MergeContext mergeContext = new MergeContext(new StartMarker(oldValue),oldValue);
+        if(newValue==oldValue)return oldValue;
+        MergeContext mergeContext = new MergeContext(new StartMarker(oldValue),oldValue,changed);
 
         DataFlowValue value = mergeWithContext(oldValue, newValue, mergeFrameIndex, mergeContext);
-        if(value==oldValue)return value;
+        if(value==oldValue)return oldValue;
         LocationListMeta listMeta = oldValue.getMeta(LocationListMeta.meta);
         if(listMeta!=null){
             value.putMeta(SelfRecursion.meta,new SelfRecursion(listMeta));
@@ -77,6 +81,7 @@ public sealed abstract class DataFlowValue implements Value
         boolean null1 = isNull(oldValue);
         boolean null2 = isNull(newValue);
         if (null2 || null1) return null;
+        if(oldValue==newValue)return oldValue;
 
         DataFlowValue deepMerge = oldValue.deepMerge(newValue, mergeContext);
         if (deepMerge != null) return deepMerge;
@@ -88,10 +93,26 @@ public sealed abstract class DataFlowValue implements Value
         }
         if (oldValue instanceof MergedDataFlowValue oldMerged && newValue instanceof MergedDataFlowValue newMerged) {
             DataFlowValue curr = oldMerged;
-            for (BaseDataFlowValue value : newMerged.values) {
-                curr = mergeWithContext(curr, value, labelIndex, mergeContext);
+            int extra=0;
+            loop: for (ValueRef value : newMerged.values) {
+                for (ValueRef oldRef : oldMerged.values) {
+                    if(oldRef==value) continue loop;
+                }
+                extra++;
             }
-            return curr;
+            if(extra==0)return oldMerged;
+            int oldLen = oldMerged.values.length;
+            ValueRef[] newValues = Arrays.copyOf(oldMerged.values, oldLen + extra);
+            extra=oldLen;
+
+            loop:for (ValueRef value : newMerged.values) {
+                for (ValueRef oldRef : oldMerged.values) {
+                    if(oldRef==value) continue loop;
+                }
+                newValues[extra++]=value;
+            }
+
+            return new MergedDataFlowValue(newValues, TypeUtil.findUnion(oldMerged.type,newMerged.type),labelIndex);
         }
 
         throw new UnsupportedOperationException("newValue is unsupported to be non Base");
@@ -134,17 +155,15 @@ public sealed abstract class DataFlowValue implements Value
 
     public abstract CommonDataFlowValue copied(AbstractInsnNode insn);
 
-    public CommonDataFlowValue addNext(CommonDataFlowValue commonDataFlowValue) {
-        EitherMergedOrCommon value = new EitherMergedOrCommon(commonDataFlowValue);
-        ValueEntry entry = new ValueEntry(value);
-        nextNodes.put(entry,value);
-        return commonDataFlowValue;
+    public CommonDataFlowValue addNext(CommonDataFlowValue value) {
+        ValueRef ref = ValueUtil.toRef(value);
+        nextNodes.put(ref,ref);
+        return value;
     }
-    public MergedDataFlowValue addNext(MergedDataFlowValue commonDataFlowValue) {
-        EitherMergedOrCommon value = new EitherMergedOrCommon(commonDataFlowValue);
-        ValueEntry entry = new ValueEntry(value);
-        nextNodes.put(entry,value);
-        return commonDataFlowValue;
+    public MergedDataFlowValue addNext(MergedDataFlowValue value) {
+        ValueRef ref = ValueUtil.toRef(value);
+        nextNodes.put(ref,ref);
+        return value;
     }
 
     /**

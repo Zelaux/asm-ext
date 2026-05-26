@@ -1,5 +1,6 @@
 package asmext.tree.analysis.dataflow.value.merge;
 
+import asmext.tree.analysis.dataflow.value.DataFlowValue;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.Nullable;
 
@@ -7,16 +8,18 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class MergeContext {
-    public static final MergeContext NULL_CONTEXT = new MergeContext() {
+    public static final MergeContext NULL_CONTEXT = new MergeContext(null,null,null) {
 
     };
+    private final boolean[] changedCallback;
+public void changed(){
+    changedCallback[0]=true;
+}
 
-    public MergeContext() {
-    }
-
-    public MergeContext(MergeMarker<?> globalMarker, Object matchableMarker) {
+    public MergeContext(MergeMarker<?> globalMarker, Object matchableMarker, boolean[] changed) {
         this.globalMarker = globalMarker;
         this.matchableMarker = matchableMarker;
+        this.changedCallback=changed;
     }
 
     private MergeMarker<?> globalMarker;

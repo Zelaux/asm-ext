@@ -2,13 +2,10 @@ package asmext.tree.analysis.dataflow.value;
 
 
 import asmext.tree.analysis.dataflow.util.TypeUtil;
-import asmext.tree.analysis.dataflow.value.merge.IndexedNodeKey;
+import asmext.tree.analysis.dataflow.util.ValueUtil;
 import asmext.tree.analysis.dataflow.value.merge.MergeContext;
-import asmext.tree.analysis.dataflow.value.merge.StartMarker;
-import asmext.tree.analysis.dataflow.value.merge.meta.LocationEntry;
-import asmext.tree.analysis.dataflow.value.merge.meta.LocationListMeta;
-import asmext.tree.analysis.dataflow.value.merge.meta.RecursiveMeta;
-import asmext.tree.analysis.dataflow.value.merge.meta.TmpInParentLocationMeta;
+import asmext.tree.analysis.dataflow.value.ref.SingleRef;
+import asmext.tree.analysis.dataflow.value.ref.ValueRef;
 import asmext.tree.analysis.dataflow.visitor.ValueCalculatorVisitor;
 import asmext.tree.analysis.dataflow.visitor.ValueVisitor;
 import lombok.EqualsAndHashCode;
@@ -26,25 +23,28 @@ import org.objectweb.asm.tree.LabelNode;
 public non-sealed class CommonDataFlowValue extends BaseDataFlowValue {
     public static final LabelNode NAV_LABEL_NODE = new LabelNode(new Label());
     static int totalCreated;
+    @EqualsAndHashCode.Exclude
+    public final SingleRef myRef;
     @NotNull
     public final AbstractInsnNode producer;
-    public final @NotNull DataFlowValue[] previousValues;
+    public final @NotNull ValueRef[] previousValues;
     @Getter
     public final boolean copyOp;
 
     CommonDataFlowValue(@NonNull Type type, @NonNull AbstractInsnNode producer, @NonNull DataFlowValue[] previousValues, boolean copyOp) {
-        super(type);
-        this.producer = producer;
-        this.previousValues = previousValues;
-        this.copyOp = copyOp;
-        totalCreated++;
+        this(type, producer, ValueUtil.toRefs(previousValues), copyOp);
         for (@NonNull DataFlowValue v : previousValues) {
-            if (v != null) v.addNext(this);
+            v.addNext(this);
         }
     }
 
-    private static int getLabelIndex(DataFlowValue newValue, DataFlowValue oldValue) {
-        return oldValue instanceof MergedDataFlowValue m ? m.labelIndex : (newValue instanceof MergedDataFlowValue m ? m.labelIndex : -1);
+    CommonDataFlowValue(@NonNull Type type, @NonNull AbstractInsnNode producer, @NonNull ValueRef[] refs, boolean copyOp) {
+        super(type);
+        this.producer = producer;
+        this.previousValues = refs;
+        this.copyOp = copyOp;
+        totalCreated++;
+        myRef= (SingleRef) ValueUtil.toRef(this);
     }
 
     @Override
@@ -70,26 +70,14 @@ public non-sealed class CommonDataFlowValue extends BaseDataFlowValue {
     }
 
     private @NotNull CommonDataFlowValue generateNewMerged(MergeContext mergeContext, CommonDataFlowValue newCommonValue, int size) {
-        CommonDataFlowValue[] future = {this};
-        DataFlowValue[] mergedSources = new DataFlowValue[size];
+        ValueRef[] mergedSources = new ValueRef[size];
         boolean hasMerged = false;
         for (int i = 0; i < size; i++) {
             var oldSource = previousValues[i];
             var newSource = newCommonValue.previousValues[i];
-            DataFlowValue visited = mergeContext.getVisited(new StartMarker(oldSource));
 
-            DataFlowValue deepMerge = visited != null ? visited : oldSource.deepMerge(newSource, mergeContext);
-            if (visited != null) {
-                LocationListMeta.addLocation(visited, new LocationEntry(future, size, i));
-            }
+            var deepMerge = ValueRef.mergeRef(oldSource, newSource,this);
             if (deepMerge != oldSource) hasMerged = true;
-            if (deepMerge == null) {
-                deepMerge = deepMergeMerged(mergeContext, newSource, oldSource, i, size, future);
-                if (deepMerge == oldSource) {
-                    hasMerged = false;
-                    continue;
-                }
-            }
             mergedSources[i] = deepMerge;
         }
         if (!hasMerged && type == newCommonValue.type) return this;
@@ -108,43 +96,12 @@ public non-sealed class CommonDataFlowValue extends BaseDataFlowValue {
                     getSize()
             );
         }
-        for (DataFlowValue source : mergedSources) {
-            source.addNext(output);
-        }
-
-        return future[0] = output;
-    }
-
-    private DataFlowValue deepMergeMerged(MergeContext mergeContext, DataFlowValue newValue, DataFlowValue oldValue, int i, int size, CommonDataFlowValue[] future) {
-        DataFlowValue deepMerge;
-        final int index = i;
-        //boolean visited = false;
-        deepMerge = mergeContext.visited(new IndexedNodeKey(producer, size, i), oldValue, (visited, value) -> {
-            if (visited) {
-                //visited = false;
-                value.putMeta(RecursiveMeta.meta, new RecursiveMeta(this, index, future));
-                return value;
-                //value = null;
-            }
-            //visited = true; value = oldValue;
-            oldValue.putMeta(TmpInParentLocationMeta.meta, new TmpInParentLocationMeta(index, future));
-            newValue.putMeta(TmpInParentLocationMeta.meta, new TmpInParentLocationMeta(index, future));
-            DataFlowValue merge = mergeWithContext(oldValue, newValue, getLabelIndex(newValue, oldValue), mergeContext);
-            oldValue.__removeMeta(TmpInParentLocationMeta.meta);
-            newValue.__removeMeta(TmpInParentLocationMeta.meta);
-            RecursiveMeta recursiveMeta = oldValue.getMeta(RecursiveMeta.meta);
-            if (recursiveMeta != null) {
-                assert merge != null;
-                oldValue.__removeMeta(RecursiveMeta.meta);
-                CommonDataFlowValue flowValue = recursiveMeta.newValue()[0];
-                flowValue.previousValues[recursiveMeta.index()] = merge;
-                merge.addNext(flowValue);
-//                System.out.println(merge.getClass());
-                merge.putMeta(RecursiveMeta.HandledRecursiveMeta.meta, new RecursiveMeta.HandledRecursiveMeta(recursiveMeta));
-            }
-            return merge;
-        });
-        return deepMerge;
+        mergeContext.changed();
+        newCommonValue.addNext(this);
+        System.arraycopy(output.previousValues, 0, previousValues, 0, output.previousValues.length);
+//        previousValues=output;
+        return this;
+//        return future[0] = output;
     }
 
     @Override

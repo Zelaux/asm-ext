@@ -1,7 +1,6 @@
 package asmext.tree.analysis.dataflow.interpreter;
 
 import asmext.tree.analysis.dataflow.DataFlowAnalyzer;
-import asmext.tree.analysis.dataflow.DataFlowFrame;
 import asmext.tree.analysis.dataflow.DupType;
 import asmext.tree.analysis.dataflow.PopType;
 
@@ -24,7 +23,6 @@ import org.objectweb.asm.tree.analysis.AnalyzerException;
 import org.objectweb.asm.tree.analysis.Frame;
 import org.objectweb.asm.tree.analysis.Interpreter;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.objectweb.asm.tree.analysis.BasicInterpreter.NULL_TYPE;
@@ -350,8 +348,11 @@ public class DataFlowInterpreter extends Interpreter<DataFlowValue> implements O
     @Override
     @NotNull
     public DataFlowValue merge(DataFlowValue value1, DataFlowValue value2) {
+        return merge(value1, value2,new boolean[1]);
+    }
 
-        DataFlowValue dataFlowValue = DataFlowValue.mergeValuesFromDifferentBranches(value1, value2,mergeFrameIndex[0]);
+    public @NotNull DataFlowValue merge(DataFlowValue value1, DataFlowValue value2, boolean[] changed) {
+        DataFlowValue dataFlowValue = DataFlowValue.mergeValuesFromDifferentBranches(value1, value2,mergeFrameIndex[0],changed);
         return DataFlowValue.nonNullOrNAV(dataFlowValue);
     }
 

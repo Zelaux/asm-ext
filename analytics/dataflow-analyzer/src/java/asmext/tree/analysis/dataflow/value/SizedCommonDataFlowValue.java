@@ -1,5 +1,6 @@
 package asmext.tree.analysis.dataflow.value;
 
+import asmext.tree.analysis.dataflow.value.ref.ValueRef;
 import asmext.tree.analysis.dataflow.visitor.ValueCalculatorVisitor;
 import asmext.tree.analysis.dataflow.visitor.ValueVisitor;
 import lombok.EqualsAndHashCode;
@@ -14,6 +15,11 @@ public class SizedCommonDataFlowValue extends CommonDataFlowValue {
      SizedCommonDataFlowValue(@NonNull Type type, @NonNull AbstractInsnNode producer, @NotNull @NonNull DataFlowValue[] previousValues, boolean copyOp, int size) {
         super(type, producer, previousValues, copyOp);
         this.size = size;
+    }
+
+    SizedCommonDataFlowValue(@NonNull Type type, @NonNull AbstractInsnNode producer, @NotNull @NonNull ValueRef[] refs, boolean copyOp,int size) {
+        super(type, producer, refs, copyOp);
+        this.size=size;
     }
 
     @Override

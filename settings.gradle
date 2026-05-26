@@ -5,12 +5,12 @@ include "dev-annotations"
 
 include "transformation:core"
 
-include "transformation:state-method"
+//include "transformation:state-method"
 
 include "analytics:method-return"
 include "analytics:collect-class-usage"
 include "analytics:object-creation"
-//include "analytics:dataflow-analyzer"
+include "analytics:dataflow-analyzer"
 include "analytics:plugable-analyzer"
 include "analytics:controlflow"
 include "analytics:sequence"
@@ -30,7 +30,7 @@ include "util:classfile-metadata"
 include "util:dynamic-dispatch"
 include "util:insn-print"
 
-include "tools:method-graph"
+//include "tools:method-graph"
 
 def scriptPath = getClass().protectionDomain.codeSource.location.path
 if(new File(new File(scriptPath),"sandbox")){

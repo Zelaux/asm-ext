@@ -283,6 +283,28 @@ public class DataFlowFrame extends PlugableAnalyzerFrame<DataFlowValue> implemen
     }
 
     @Override
+    protected boolean justMerge(Frame<? extends DataFlowValue> frame0, Interpreter<DataFlowValue> interpreter0) throws AnalyzerException {
+        var frame = (DataFlowFrame) frame0;
+        var interpreter = (DataFlowInterpreter) interpreter0;
+        if (getStackSize() != frame.getStackSize()) {
+            throw new AnalyzerException(null, "Incompatible stack heights");
+        }
+        boolean changed = false;
+        int totalSize = getLocals() + getStackSize();
+        boolean[] isChanged = new boolean[1];
+        for (int i = 0; i < totalSize; ++i) {
+            isChanged[0]=false;
+            DataFlowValue v = interpreter.merge((DataFlowValue) values[i],(DataFlowValue) frame.values[i], isChanged);
+            if (!v.equals(values[i]) || isChanged[0]) {
+                values[i] = v;
+                changed = true;
+            }
+        }
+        return changed;
+//        return super.justMerge(frame, interpreter);
+    }
+
+    @Override
     public String toString() {
         return "<" + InsnPrint.toString(insnNode) + ">: " + super.toString();
     }

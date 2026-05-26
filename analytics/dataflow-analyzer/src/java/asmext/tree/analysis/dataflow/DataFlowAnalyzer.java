@@ -7,6 +7,7 @@ import asmext.tree.analysis.dataflow.interpreter.DataFlowInterpreter;
 import asmext.tree.analysis.dataflow.util.ValueUtil;
 import asmext.tree.analysis.dataflow.value.CommonDataFlowValue;
 import asmext.tree.analysis.dataflow.value.DataFlowValue;
+import asmext.tree.analysis.dataflow.value.ref.ValueRef;
 import lombok.Getter;
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
@@ -48,6 +49,7 @@ public class DataFlowAnalyzer extends PlugableAnalyzer<DataFlowValue> {
     public final boolean shouldSetUsageOfValues;
     @Getter
     protected final int[] mergeFrameIndex = new int[1];
+    public DataFlowValue[][] instructionToProducedValues;
     @Getter
     protected MethodNode methodNode;
 
@@ -118,8 +120,8 @@ public class DataFlowAnalyzer extends PlugableAnalyzer<DataFlowValue> {
                                 .computeIfAbsent(key, Function.identity()).addFrame(i);
                     }
                     if (value instanceof CommonDataFlowValue commonDataFlowValue) {
-                        for (@NotNull DataFlowValue flowValue : commonDataFlowValue.previousValues) {
-                            flowValue.addNext(commonDataFlowValue);
+                        for (@NotNull ValueRef flowValue : commonDataFlowValue.previousValues) {
+//                            flowValue.addNext(commonDataFlowValue);
                         }
                     }
                 }
