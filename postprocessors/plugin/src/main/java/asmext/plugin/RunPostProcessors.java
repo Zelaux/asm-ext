@@ -6,13 +6,14 @@ import lombok.SneakyThrows;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ResolvedArtifact;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.internal.provider.PropertyFactory;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.ProviderFactory;
-import org.gradle.api.tasks.JavaExec;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.tasks.*;
 import org.gradle.jvm.toolchain.JavaToolchainService;
+import org.gradle.process.ExecOperations;
 import org.gradle.process.internal.ExecActionFactory;
 import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ClassReader;
@@ -29,37 +30,18 @@ import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-class RunPostProcessors extends DelegateExec {
-    @Getter
-    public final JavaExec javaExec = new JavaExec() {
+abstract class RunPostProcessors extends DelegateExec {
 
-        @Inject
-        protected ObjectFactory getObjectFactory() {
-            return RunPostProcessors.this.getObjectFactory();
-        }
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public abstract ConfigurableFileCollection getMainClassesDirs();
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public abstract ConfigurableFileCollection getCompileClasspath();
 
-
-        protected PropertyFactory getPropertyFactory() {
-            return RunPostProcessors.this.getPropertyFactory();
-        }
-
-        @Inject
-        protected ExecActionFactory getExecActionFactory() {
-            return RunPostProcessors.this.getExecActionFactory();
-        }
-
-        @Inject
-        protected JavaToolchainService getJavaToolchainService() {
-            return RunPostProcessors.this.getJavaToolchainService();
-        }
-
-        @Inject
-        protected ProviderFactory getProviderFactory() {
-            return RunPostProcessors.this.getProviderFactory();
-        }
-    };
-
-
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public abstract ConfigurableFileCollection getRuntimeClasspath();
 
     public static final String SERVICES = "META-INF/services/" + TransformationProvider.class.getCanonicalName();
     public static final Class<RunPostProcessors> SELF_CLASS = RunPostProcessors.class;
@@ -88,30 +70,38 @@ class RunPostProcessors extends DelegateExec {
     @Inject
     public RunPostProcessors() {
         super();
-        getMainClass().set(Constants.ASMLIB_TRANSFORM_MAIN);
     }
+    @Override
+    public org.gradle.process.JavaExecSpec getJavaExec() {
+        throw new UnsupportedOperationException("Use getExecOperations() instead of getJavaExec()");
+    }
+
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public abstract ConfigurableFileCollection getPostprocessorClasspath();
+
+    @Inject
+    protected abstract ExecOperations getExecOperations();
 
     @SneakyThrows
     @TaskAction
     public void run() {
-        Project project = getProject();
-        var artifacts = getArtifacts(project, Constants.CLASSPATH_NAME);
-        var javaExt = project.getExtensions().getByType(JavaPluginExtension.class);
+        var artifacts = getPostprocessorClasspath();
 
 
         ArrayList<String> rawArgs = new ArrayList<>();
         rawArgs.add("");
 
-        classpath(getFile(asmlib.transform.Main.class));
-        classpath(getFile(ClassReader.class));
-        classpath(getFile(ClassNode.class));
-        boolean error=false;
-        for(ResolvedArtifact artifact : artifacts) {
-//            System.out.println(artifact);
+        ArrayList<Object> classPath=new ArrayList<>();
+        classPath.add(getFile(asmlib.transform.Main.class));
+        classPath.add(getFile(ClassReader.class));
+        classPath.add(getFile(ClassNode.class));
+        boolean error = false;
+        for(var file : artifacts.getFiles()) {
+            //            System.out.println(artifact);
 
-            File file = artifact.getFile();
-            if(!file.exists()){
-                error=true;
+            if(!file.exists()) {
+                error = true;
                 System.err.println(file.getAbsolutePath());
                 break;
             }
@@ -122,73 +112,41 @@ class RunPostProcessors extends DelegateExec {
                     rawArgs.add(s);
                 }
             }
-            classpath(file);
+            classPath.add(file);
         }
 
-        if(error)throw null;
+        if(error) throw null;
 
 
-        addArtifacts(project, rawArgs, "compileClasspath", "-cd");
-        addArtifacts(project, rawArgs, "runtimeClasspath", "-rd");
+        addFilesToArgs(getCompileClasspath().getFiles(), rawArgs, "-cd");
+        addFilesToArgs(getRuntimeClasspath().getFiles(), rawArgs, "-rd");
+
 
         String[] args = rawArgs.toArray(String[]::new);
-        for(File main : javaExt.getSourceSets().getByName("main").getOutput().getClassesDirs()) {
+
+
+        for(File main : getMainClassesDirs().getFiles()) {
             args[0] = main.getAbsolutePath();
-//            System.out.println(Arrays.toString(args));
-            setArgs(List.of(args));
-            javaExec.exec();
+            //            System.out.println(Arrays.toString(args));
+            getExecOperations().javaexec(spec -> {
+                for(Object o : classPath) {
+                    spec.classpath(o);
+                }
+                spec.getMainClass().set(Constants.ASMLIB_TRANSFORM_MAIN);
+                spec.setArgs(List.of(args));
+            });
         }
     }
-
-    private static void addArtifacts(Project project, ArrayList<String> rawArgs, String compileClasspath, String optionName) {
-        var compileArtifacts = getArtifacts(project, compileClasspath);
-        if(!compileArtifacts.isEmpty()){
+    private static void addFilesToArgs(Set<File> files, ArrayList<String> rawArgs, String optionName) {
+        if(!files.isEmpty()) {
             rawArgs.add(optionName);
-            addArtifacts(compileArtifacts, rawArgs);
+            for(File file : files) {
+                if(file.exists()) {
+                    rawArgs.add(file.getAbsolutePath());
+                }
+            }
         }
     }
 
-    private static void addArtifacts(Set<ResolvedArtifact> compileArtifacts, ArrayList<String> rawArgs) {
-        for(ResolvedArtifact compileArtifact : compileArtifacts) {
-            File file = compileArtifact.getFile();
-            if(!file.exists()) {continue;}
-            rawArgs.add(file.getAbsolutePath());
-        }
-    }
 
-    private static @NotNull Set<ResolvedArtifact> getArtifacts(Project project, String classpathName) {
-        Configuration config = project
-            .getConfigurations()
-            .getByName(classpathName);
-        config.resolve();
-        var configuration = config
-            .getResolvedConfiguration();
-
-        var artifacts = configuration.getResolvedArtifacts();
-        return artifacts;
-    }
-
-    @Inject
-    protected ObjectFactory getObjectFactory() {
-        throw new UnsupportedOperationException();
-    }
-    @Inject
-    protected PropertyFactory getPropertyFactory() {
-        return null;
-    }
-
-    @Inject
-    protected ExecActionFactory getExecActionFactory() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Inject
-    protected JavaToolchainService getJavaToolchainService() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Inject
-    protected ProviderFactory getProviderFactory() {
-        throw new UnsupportedOperationException();
-    }
 }

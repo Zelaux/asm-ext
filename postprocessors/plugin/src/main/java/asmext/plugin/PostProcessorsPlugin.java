@@ -35,7 +35,7 @@ public class PostProcessorsPlugin implements Plugin<Project> {
             //            it.setCanBeResolved(true);
 
         });
-        var javaExt = project.getExtensions().getByType(JavaPluginExtension.class);
+        //var javaExt = project.getExtensions().getByType(JavaPluginExtension.class);
         //        javaExt.getSourceSets().create(Constants.CONFIGURATION_NAME,"")
         var tasks = project.getTasks();
         var classesTask = tasks.named("classes");
@@ -59,6 +59,18 @@ public class PostProcessorsPlugin implements Plugin<Project> {
             it.dependsOn(classesTask);
             it.setGroup("build");
             it.dependsOn(compileClasspathConfiguration);
+
+            Configuration postprocessorConfig = project.getConfigurations().getByName(Constants.CLASSPATH_NAME);
+            it.getPostprocessorClasspath().from(postprocessorConfig);
+            it.getCompileClasspath().from(project.getConfigurations().getByName("compileClasspath"));
+            it.getRuntimeClasspath().from(project.getConfigurations().getByName("runtimeClasspath"));
+
+
+            var javaExt = project.getExtensions().getByType(JavaPluginExtension.class);
+
+            it.getMainClassesDirs().from(
+                javaExt.getSourceSets().getByName("main").getOutput().getClassesDirs()
+            );
         });
 
         tasks.named("compileJava").configure(it -> it.getInputs().files(compileClasspathConfiguration));
