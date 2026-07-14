@@ -30,7 +30,7 @@ import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-abstract class RunPostProcessors extends DelegateExec {
+abstract class RunPostProcessors extends JavaExec {
 
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
@@ -70,10 +70,7 @@ abstract class RunPostProcessors extends DelegateExec {
     @Inject
     public RunPostProcessors() {
         super();
-    }
-    @Override
-    public org.gradle.process.JavaExecSpec getJavaExec() {
-        throw new UnsupportedOperationException("Use getExecOperations() instead of getJavaExec()");
+        getMainClass().set(Constants.ASMLIB_TRANSFORM_MAIN);
     }
 
     @InputFiles
@@ -92,10 +89,9 @@ abstract class RunPostProcessors extends DelegateExec {
         ArrayList<String> rawArgs = new ArrayList<>();
         rawArgs.add("");
 
-        ArrayList<Object> classPath=new ArrayList<>();
-        classPath.add(getFile(asmlib.transform.Main.class));
-        classPath.add(getFile(ClassReader.class));
-        classPath.add(getFile(ClassNode.class));
+        classpath(getFile(asmlib.transform.Main.class));
+        classpath(getFile(ClassReader.class));
+        classpath(getFile(ClassNode.class));
         boolean error = false;
         for(var file : artifacts.getFiles()) {
             //            System.out.println(artifact);
@@ -112,7 +108,7 @@ abstract class RunPostProcessors extends DelegateExec {
                     rawArgs.add(s);
                 }
             }
-            classPath.add(file);
+            classpath(file);
         }
 
         if(error) throw null;
@@ -127,14 +123,10 @@ abstract class RunPostProcessors extends DelegateExec {
 
         for(File main : getMainClassesDirs().getFiles()) {
             args[0] = main.getAbsolutePath();
-            //            System.out.println(Arrays.toString(args));
-            getExecOperations().javaexec(spec -> {
-                for(Object o : classPath) {
-                    spec.classpath(o);
-                }
-                spec.getMainClass().set(Constants.ASMLIB_TRANSFORM_MAIN);
-                spec.setArgs(List.of(args));
-            });
+
+            setArgs(List.of(args));
+
+            super.exec();
         }
     }
     private static void addFilesToArgs(Set<File> files, ArrayList<String> rawArgs, String optionName) {
