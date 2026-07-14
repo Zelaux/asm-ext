@@ -29,6 +29,7 @@ public interface TransformationWriter extends Comparable<TransformationWriter> {
     static @Nullable TransformationWriter nodeTransformer(NodeTransformer transformer) {
         return transformer;
     }
+    static @Nullable TransformationWriter nodeTransformerThis(NodeTransformerThis transformer) {return transformer;}
 
     static @Nullable TransformationWriter writeTransformer(WriteTransformer transformer) {
         return transformer;
@@ -56,6 +57,21 @@ public interface TransformationWriter extends Comparable<TransformationWriter> {
     ClassVisitor createWriteVisitor(String className, ClassVisitor visitor);
 
     interface NodeTransformer extends TransformationWriter {
+        @Override
+        @Nullable
+        default ClassVisitor createWriteVisitor(String className, ClassVisitor visitor) {
+            return null;
+        }
+    }
+    interface NodeTransformerThis extends TransformationWriter {
+        @Override
+        default ClassNode transformClass(ClassNode classNode){
+            transformClassNode(classNode);
+            return classNode;
+        }
+
+        void transformClassNode(ClassNode classNode);
+
         @Override
         @Nullable
         default ClassVisitor createWriteVisitor(String className, ClassVisitor visitor) {

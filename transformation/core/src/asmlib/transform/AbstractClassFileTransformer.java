@@ -5,6 +5,7 @@ import asmlib.transform.context.TransformationContext;
 @SuppressWarnings("unused")
 public abstract class AbstractClassFileTransformer implements TransformationProvider {
     public int roundLeft;
+    /**Starts with 0*/
     public int roundIndex;
 
     /**
