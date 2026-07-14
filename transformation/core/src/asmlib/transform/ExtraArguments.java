@@ -17,7 +17,7 @@ public class ExtraArguments implements Iterable<String> {
     private boolean release;
 
     public boolean isDebug() {
-        return !debug;
+        return debug;
     }
 
     public void invalidateLoopupTable() {
