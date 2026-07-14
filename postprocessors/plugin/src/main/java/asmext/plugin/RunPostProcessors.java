@@ -1,5 +1,6 @@
 package asmext.plugin;
 
+import asmlib.transform.Main;
 import asmlib.transform.TransformationProvider;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -82,12 +83,13 @@ abstract class RunPostProcessors extends JavaExec {
 
     @SneakyThrows
     @TaskAction
-    public void run() {
+    public void exec() {
         var artifacts = getPostprocessorClasspath();
 
 
         ArrayList<String> rawArgs = new ArrayList<>();
         rawArgs.add("");
+
 
         classpath(getFile(asmlib.transform.Main.class));
         classpath(getFile(ClassReader.class));
@@ -111,13 +113,16 @@ abstract class RunPostProcessors extends JavaExec {
             classpath(file);
         }
 
-        if(error) throw null;
+        if(error) throw new RuntimeException("Dependency error occurred, see logs");
 
 
         addFilesToArgs(getCompileClasspath().getFiles(), rawArgs, "-cd");
         addFilesToArgs(getRuntimeClasspath().getFiles(), rawArgs, "-rd");
 
-
+        rawArgs.add("-extra");
+        for(String arg : getArgs()) {
+            rawArgs.add(Main.escapeExtraArg(arg));
+        }
         String[] args = rawArgs.toArray(String[]::new);
 
 
