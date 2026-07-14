@@ -24,7 +24,7 @@ private void includeSelf0(SettingsScript origin, File root, boolean doPrint) {
 
     def rootProjectName = (fileContent =~ /rootProject\.name\s*=\s*['"]([^'"]+)['"]/)[0][1]
 
-    def transformedIncludes = (fileContent =~ /include\s*(\(\s*['"]([^'"\s]+)['"]\s*\)|\s*['"]([^'"\s]+)['"]\s*)\s*/)
+    def transformedIncludes = (fileContent =~ Pattern.compile("\\ninclude\\s*(\\(\\s*['\"]([^\"\\s]+)['\"]\\s*\\)|\\s*['\"]([^'\"\\s]+)['\"])"))
             .collect { transformIncludeString(Objects.requireNonNullElse(it[3], it[2])) }
 
     origin.includeBuild(root.getAbsolutePath(), { ConfigurableIncludedBuild it1 ->
@@ -46,7 +46,7 @@ private void includeSelf0(SettingsScript origin, File root, boolean doPrint) {
 
 ext {
     includeSelf = { SettingsScript settings, File root ->
-        includeSelf0(settings, root,false)
+        includeSelf0(settings, root,true)
 
         ext.includeSelf = null
     }
