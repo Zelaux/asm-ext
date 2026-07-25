@@ -10,7 +10,7 @@ import java.util.Map;
 
 public class ExtraArguments implements Iterable<String> {
     private final ArrayList<String> list = new ArrayList<>();
-    private Map<String, Integer> loopupTable;
+    private Map<String, Integer> lookupTable;
 
     private boolean debug;
     @Getter
@@ -20,12 +20,12 @@ public class ExtraArguments implements Iterable<String> {
         return debug;
     }
 
-    public void invalidateLoopupTable() {
-        loopupTable = null;
+    public void invalidateLookupTable() {
+        lookupTable = null;
     }
 
-    public Map<String, Integer> getLoopupTable() {
-        Map<String, Integer> map = loopupTable;
+    public Map<String, Integer> getLookupTable() {
+        Map<String, Integer> map = lookupTable;
         if(map == null) {
             map = new HashMap<>(list.size());
             for(int i = 0; i < list.size(); i++) {
@@ -40,7 +40,7 @@ public class ExtraArguments implements Iterable<String> {
         list.add(arg);
         if(arg.equals("-debug")) debug = true;
         if(arg.equals("-release")) release = true;
-        invalidateLoopupTable();
+        invalidateLookupTable();
     }
 
     public void remove(String arg) {
@@ -56,7 +56,7 @@ public class ExtraArguments implements Iterable<String> {
     private void removed(String remove) {
         if(remove.equals("-debug")) debug = false;
         if(remove.equals("-release")) release = false;
-        invalidateLoopupTable();
+        invalidateLookupTable();
     }
 
     public int size(){
@@ -69,6 +69,6 @@ public class ExtraArguments implements Iterable<String> {
     }
 
     public boolean contains(String s) {
-        return getLoopupTable().containsKey(s);
+        return getLookupTable().containsKey(s);
     }
 }

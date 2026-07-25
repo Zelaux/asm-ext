@@ -1,11 +1,13 @@
 package asmlib.transform.context;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 import java.io.File;
 import java.util.Map;
 
 @AllArgsConstructor
+@Getter
 public class Dependency {
     public final File file;
 

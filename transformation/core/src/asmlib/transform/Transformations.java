@@ -5,6 +5,7 @@ import asmlib.transform.context.TransformationContext;
 import asmlib.transform.file.FileEntry;
 import asmlib.transform.file.FileExtension;
 import asmlib.transform.file.FileTree;
+import asmlib.transform.write.ClassLoaderHierarchy;
 import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -13,6 +14,8 @@ import org.objectweb.asm.tree.MethodNode;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 
 public class Transformations {
@@ -34,8 +37,29 @@ public class Transformations {
         FileUtil.copyDirectory(rootFile, outputFolder);
 
 
+        var urls = new ArrayList<URL>();
+
+        // 2. Итерируемся по компиляционным зависимостям
+        // (Предполагаю, что у Dependencies есть метод для получения списка или он итерируемый)
+        for (var dep : context.compileDependencies()) {
+            // В зависимости от реализации Dependency, используйте dep.file или dep.getFile() или dep.getPath()
+            File file = dep.getFile();
+            if (file != null && file.exists()) {
+                urls.add(file.toURI().toURL());
+            } else {
+                System.err.println("Warning: Dependency not found: " + dep);
+            }
+        }
+
+        // 3. Создаем URLClassLoader
+        // Важно использовать Main.class.getClassLoader() как родительский,
+        // чтобы были видны сами классы библиотеки и ASM
+        var classLoader=new URLClassLoader(
+            urls.toArray(new java.net.URL[0]),
+            Main.class.getClassLoader()
+        );
         TransformationPipeline transformationPipeline = new TransformationPipeline(
-            providers
+            classLoader, providers
         );
         //noinspection StatementWithEmptyBody
         int i = 1;

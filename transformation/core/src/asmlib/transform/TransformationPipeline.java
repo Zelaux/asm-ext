@@ -3,6 +3,9 @@ package asmlib.transform;
 import asmlib.transform.context.TransformationContext;
 import asmlib.transform.file.FileEntry;
 import asmlib.transform.file.FileTree;
+import asmlib.transform.write.ClassLoaderHierarchy;
+import asmlib.transform.write.CustomClassWriter;
+import asmlib.transform.write.Hierarchy;
 import lombok.AllArgsConstructor;
 import lombok.Lombok;
 import org.jetbrains.annotations.NotNull;
@@ -10,6 +13,7 @@ import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 
 import java.io.File;
@@ -18,16 +22,35 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 public class TransformationPipeline {
     TransformationProvider[] transformationProviders;
     public boolean doLog;
+    private Hierarchy hierarchy;
+    private ClassLoaderHierarchy classLoaderHierarchy;
 
-    public TransformationPipeline(TransformationProvider... transformationProviders) {
+    public TransformationPipeline(ClassLoader dependencyClassLoader, TransformationProvider... transformationProviders) {
         this.transformationProviders = new TransformationProvider[transformationProviders.length];
         System.arraycopy(transformationProviders, 0, this.transformationProviders, 0, transformationProviders.length);
         Arrays.sort(this.transformationProviders);
+
+        classLoaderHierarchy=new ClassLoaderHierarchy(dependencyClassLoader,null);
+        hierarchy= new Hierarchy(classLoaderHierarchy) {
+            @Override
+            public RawClassMeta findRawMeta(String classCanonicalName) {
+                FileEntry entry = canonicalNameToFileEntry.get(classCanonicalName);
+                if(entry == null) return null;
+                byte[] bytes = loadBytes(entry);
+                ClassReader reader = new ClassReader(bytes);
+                return RawClassMeta.of(
+                    reader.getSuperName(),
+                    (reader.getAccess() & Opcodes.ACC_INTERFACE) != 0
+                );
+            }
+        };
+
     }
 
     private static void saveToFile(File outputOperationClass, byte[] byteArray) throws IOException {
@@ -40,12 +63,16 @@ public class TransformationPipeline {
         }
     }
 
+    HashMap<String, FileEntry> canonicalNameToFileEntry =new HashMap<>();
+
     public boolean round(FileTree root, List<FileEntry> classpath, TransformationContext context) throws IOException {
         for(var provider : transformationProviders) {
             provider.beforeRound(context);
         }
+
+        classpath.forEach(it -> canonicalNameToFileEntry.put(it.classpathName(), it));
         var writers = readState(classpath, context);
-        var state = writeState(writers);
+        var state = writeState(classpath, writers);
         ArrayList<TransformationProvider> providers = new ArrayList<>(transformationProviders.length);
         for(var provider : transformationProviders) {
             provider.finishRound(context);
@@ -64,7 +91,7 @@ public class TransformationPipeline {
         return hasFiles && this.transformationProviders.length > 0;
     }
 
-    private ProcessedFileEntry[] writeState(FileWithData[] writers) throws IOException {
+    private ProcessedFileEntry[] writeState(List<FileEntry> classpath, FileWithData[] writers) throws IOException {
         int changedCounter = 0;
         ProcessedFileEntry[] changedEntries = new ProcessedFileEntry[writers.length];
         for(var writer : writers) {
@@ -78,20 +105,26 @@ public class TransformationPipeline {
             {
                 ClassReader reader = new ClassReader(allBytes);
                 reader.accept(classNode, 0);
-                classWriter = new ClassWriter(reader, ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+                classWriter = new CustomClassWriter(reader, ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS, hierarchy);
             }
 
-
+            String wasSuper = classNode.superName;
             ClassVisitor visitor = classWriter;
             boolean changed = false;
             for(var transformer : transformers) {
                 if(transformer == TransformationWriter.CONTINUE_WRITER) {
-                    if(changedCounter == 0) changedEntries[changedCounter++] = new ProcessedFileEntry(key, ProcessedFileEntry.Type.Mock);
+                    if(changedCounter == 0) {
+                        changedEntries[changedCounter++] = new ProcessedFileEntry(key, ProcessedFileEntry.Type.Mock);
+                        changed=false;
+                    }
                     continue;
                 }
                 if(transformer == TransformationWriter.DELETE_WRITER) {
                     changedEntries[changedCounter++] = new ProcessedFileEntry(key, ProcessedFileEntry.Type.Deleted);
                     key.file.delete();
+                    classpath.remove(key);
+                    changed=false;
+                    hierarchy.erase(classNode.name);
                     break;
                 }
                 ClassNode transformed = transformer.transformClass(classNode);
@@ -109,6 +142,9 @@ public class TransformationPipeline {
                 classNode.accept(visitor);
                 changedEntries[changedCounter++] = new ProcessedFileEntry(key, ProcessedFileEntry.Type.Changed);
                 saveToFile(key.file, classWriter.toByteArray());
+                if(!classNode.superName.equals(wasSuper)) {
+                    hierarchy.erase(classNode.name);
+                }
             }
         }
         if(changedCounter == 0) return ProcessedFileEntry.EMPTY_ARRAY;
@@ -138,12 +174,7 @@ public class TransformationPipeline {
 
         if(transformationProviders.length == 0) return null;
         TransformationWriter[] writers = new TransformationWriter[transformationProviders.length];
-        byte[] allBytes;
-        try(FileInputStream fileInputStream = new FileInputStream(fileEntry.file)) {
-            allBytes = fileInputStream.readAllBytes();
-        } catch(IOException e) {
-            throw Lombok.sneakyThrow(e);
-        }
+        byte[] allBytes = loadBytes(fileEntry);
         var byteCodeProvider = new LazyByteCodeProvider(() -> Arrays.copyOf(allBytes, allBytes.length));
         int counter = 0;
         for(var transformer : transformationProviders) {
@@ -157,6 +188,16 @@ public class TransformationPipeline {
         if(counter == 0) return null;
         if(writers.length > counter) writers = Arrays.copyOf(writers, counter);
         return new FileWithData(fileEntry, allBytes, writers);
+    }
+
+    private byte @NotNull [] loadBytes(FileEntry fileEntry) {
+        byte[] allBytes;
+        try(FileInputStream fileInputStream = new FileInputStream(fileEntry.file)) {
+            allBytes = fileInputStream.readAllBytes();
+        } catch(IOException e) {
+            throw Lombok.sneakyThrow(e);
+        }
+        return allBytes;
     }
 
     public record FileWithData(FileEntry file, byte[] byteCode, TransformationWriter[] data) {}
